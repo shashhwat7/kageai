@@ -1,0 +1,10 @@
+Meeting Transcript: iOS App Kickoff
+Date: August 22, 2026
+Participants: Sarah (Product), Leo (Design), Chris (iOS Lead)
+
+[13:00:00] Sarah: Let's kick off the iOS app development. Chris, what's our tech stack?
+[13:01:00] Chris: We're going with Swift and SwiftUI. It's the most modern approach.
+[13:02:00] Leo: Do you need the assets exported in a specific format?
+[13:02:30] Chris: Yes, PDF vectors are best for Xcode. 
+[13:03:00] Leo: Got it. I will export all icons by Wednesday.
+[13:04:00] Chris: I will set up the GitHub repository today.

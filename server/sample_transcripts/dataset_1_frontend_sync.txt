@@ -1,0 +1,10 @@
+Meeting Transcript: Frontend Architecture Sync
+Date: August 15, 2026
+Participants: Alex (Lead), Jamie (React Dev), Taylor (UX)
+
+[10:00:00] Alex: Let's discuss the new state management approach. Are we sticking with Redux or moving to Zustand?
+[10:01:00] Jamie: I've done a prototype with Zustand. It's much lighter. I will submit the PR for review tomorrow.
+[10:02:00] Alex: That's great. Taylor, how does this affect the component re-renders on the dashboard?
+[10:02:15] Taylor: It should improve it, but I actually think we might need to lazy load the charts regardless.
+[10:03:00] Jamie: I disagree, lazy loading might cause layout shifts. We must run a Lighthouse audit first.
+[10:04:00] Alex: Good point. Jamie, please run the Lighthouse audit by Friday.

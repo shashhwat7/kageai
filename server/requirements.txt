@@ -1,0 +1,10 @@
+# --- Core NLP & Linguistics ---
+spacy==3.7.4
+nltk==3.8.1
+
+# --- Machine Learning & Analytics ---
+scikit-learn==1.4.2
+numpy<2.0.0
+
+# --- Utilities ---
+python-dotenv==1.0.1

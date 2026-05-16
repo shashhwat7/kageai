@@ -1,0 +1,11 @@
+Meeting Transcript: Payment API V2 Planning
+Date: August 19, 2026
+Participants: Marcus (Backend), Jamie (Frontend), Riley (Security), Casey (QA)
+
+[15:00:00] Marcus: We're scoping V2 of the Payment API. We need to transition from REST to GraphQL.
+[15:01:00] Jamie: Will that break the existing mobile app clients?
+[15:01:30] Marcus: We will maintain V1 for six months. I will write the deprecation notice next week.
+[15:02:00] Riley: Make sure you implement rate limiting on the GraphQL endpoint. It's a huge attack vector.
+[15:03:00] Marcus: Good call. I'll task the security team with the rate limiter design.
+[15:04:00] Casey: When can QA expect a staging environment?
+[15:04:30] Marcus: We plan to have staging ready by September 1st.

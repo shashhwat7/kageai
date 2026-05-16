@@ -1,0 +1,279 @@
+{
+    "summary": {
+        "total_speakers": 8,
+        "keywords": [
+            "CAD",
+            "Node.js",
+            "API",
+            "Chennai",
+            "Leo (Design"
+        ],
+        "executive_summary": [
+            {
+                "speaker": "Srini",
+                "text": "Okay team, let's look at the pipe-fixer prototype. We need to finalize the CAD designs for the crawler by Friday. Rahul, where are we with the dashboard integration?"
+            },
+            {
+                "speaker": "Srini",
+                "text": "Perfect. Ananya, also make sure to document the API endpoints in Swagger for the rest of the team. Bruno, do we have the client feedback from the site visit to the Chennai water facility yesterday?"
+            },
+            {
+                "speaker": "Marcus",
+                "text": "We are currently refactoring the user authentication module. I will implement the new OAuth flow by next Tuesday. It's crucial that we test this thoroughly before the release."
+            }
+        ]
+    },
+    "analytics": {
+        "Srini": {
+            "participation": "24%",
+            "sentiment": "Positive"
+        },
+        "Rahul": {
+            "participation": "6%",
+            "sentiment": "Neutral/Serious"
+        },
+        "Ananya": {
+            "participation": "12%",
+            "sentiment": "Neutral/Serious"
+        },
+        "Bruno": {
+            "participation": "6%",
+            "sentiment": "Positive"
+        },
+        "Sarah": {
+            "participation": "18%",
+            "sentiment": "Positive"
+        },
+        "Marcus": {
+            "participation": "18%",
+            "sentiment": "Neutral/Serious"
+        },
+        "Leo": {
+            "participation": "6%",
+            "sentiment": "Positive"
+        },
+        "Chloe": {
+            "participation": "12%",
+            "sentiment": "Positive"
+        }
+    },
+    "action_items": [
+        {
+            "time": "00:00:05",
+            "assigned_to": "Rahul",
+            "task": "Okay team, let's look at the pipe-fixer prototype. We need to finalize the CAD designs for the crawler by Friday. Rahul, where are we with the dashboard integration?",
+            "deadlines": [
+                "Friday"
+            ]
+        },
+        {
+            "time": "00:00:45",
+            "assigned_to": "Rahul",
+            "task": "The React frontend is mostly ready, but I\u2019m struggling with the real-time sensor feed. The data from the crawler is coming in as raw binary, and I need a JSON bridge to display the telemetry properly.",
+            "deadlines": []
+        },
+        {
+            "time": "00:01:15",
+            "assigned_to": "Ananya",
+            "task": "I can handle that. I\u2019ll write a Node.js middleware to parse the binary stream from the robot's hardware. I should have it ready by Wednesday evening so you can test it on Thursday morning.",
+            "deadlines": [
+                "Wednesday",
+                "evening",
+                "Thursday",
+                "morning"
+            ]
+        },
+        {
+            "time": "00:01:50",
+            "assigned_to": "Ananya",
+            "task": "Perfect. Ananya, also make sure to document the API endpoints in Swagger for the rest of the team. Bruno, do we have the client feedback from the site visit to the Chennai water facility yesterday?",
+            "deadlines": [
+                "yesterday"
+            ]
+        },
+        {
+            "time": "00:02:10",
+            "assigned_to": "Bruno",
+            "task": "Yes. The client said the crawler needs to be waterproof up to 5 meters. That\u2019s a new requirement we didn't account for in the initial scope. We might need to adjust the casing material budget and re-evaluate the O-ring seals.",
+            "deadlines": []
+        },
+        {
+            "time": "00:02:45",
+            "assigned_to": "Srini",
+            "task": "Waterproofing up to 5 meters is a major change. Let\u2019s schedule a separate meeting with the hardware team tomorrow at 10 AM. We\u2019ll need to re-evaluate the Bill of Materials (BOM) before we order the next batch of prototypes.",
+            "deadlines": [
+                "tomorrow",
+                "10 AM"
+            ]
+        },
+        {
+            "time": "00:03:15",
+            "assigned_to": "Ananya",
+            "task": "I'll check if the current sensor housing can handle that pressure or if we need a complete redesign.",
+            "deadlines": []
+        },
+        {
+            "time": "00:03:30",
+            "assigned_to": "Ananya",
+            "task": "Thanks, Ananya. Let's wrap this up and get back to the sprint tasks.",
+            "deadlines": []
+        },
+        {
+            "time": "09:00:00",
+            "assigned_to": "Marcus",
+            "task": "Good morning everyone. We must finalize the Q3 roadmap today. Marcus, can you give us an update on the backend migration?",
+            "deadlines": [
+                "morning",
+                "today"
+            ]
+        },
+        {
+            "time": "09:00:30",
+            "assigned_to": "Marcus",
+            "task": "We are currently refactoring the user authentication module. I will implement the new OAuth flow by next Tuesday. It's crucial that we test this thoroughly before the release.",
+            "deadlines": [
+                "next Tuesday"
+            ]
+        },
+        {
+            "time": "09:01:15",
+            "assigned_to": "Leo",
+            "task": "The UI components for the login screen are ready. I plan to send the Figma files to the engineering team this afternoon.",
+            "deadlines": [
+                "this afternoon"
+            ]
+        },
+        {
+            "time": "09:01:45",
+            "assigned_to": "Chloe",
+            "task": "From a marketing perspective, we need the landing page updated before the campaign launches on August 25th.",
+            "deadlines": [
+                "August 25th"
+            ]
+        },
+        {
+            "time": "09:02:10",
+            "assigned_to": "Marcus",
+            "task": "I can schedule a quick review of the landing page metrics. However, I expect some delays with the database integration.",
+            "deadlines": []
+        },
+        {
+            "time": "09:02:45",
+            "assigned_to": "Marcus",
+            "task": "That's a major concern. We have to guarantee a smooth launch. Marcus, please assign someone to investigate the database bottlenecks immediately.",
+            "deadlines": []
+        },
+        {
+            "time": "09:03:20",
+            "assigned_to": "Marcus",
+            "task": "Understood. I will task David with analyzing the database queries tomorrow morning.",
+            "deadlines": [
+                "tomorrow",
+                "morning"
+            ]
+        },
+        {
+            "time": "09:03:55",
+            "assigned_to": "Chloe",
+            "task": "Great. I'll draft the press release once David confirms the system is stable.",
+            "deadlines": []
+        },
+        {
+            "time": "09:04:20",
+            "assigned_to": "Sarah",
+            "task": "Excellent. Let's reconvene on Thursday to evaluate the progress.",
+            "deadlines": [
+                "Thursday"
+            ]
+        }
+    ],
+    "transcript": {
+        "segments": [
+            {
+                "time": "00:00:05",
+                "speaker": "Srini",
+                "text": "Okay team, let's look at the pipe-fixer prototype. We need to finalize the CAD designs for the crawler by Friday. Rahul, where are we with the dashboard integration?"
+            },
+            {
+                "time": "00:00:45",
+                "speaker": "Rahul",
+                "text": "The React frontend is mostly ready, but I\u2019m struggling with the real-time sensor feed. The data from the crawler is coming in as raw binary, and I need a JSON bridge to display the telemetry properly."
+            },
+            {
+                "time": "00:01:15",
+                "speaker": "Ananya",
+                "text": "I can handle that. I\u2019ll write a Node.js middleware to parse the binary stream from the robot's hardware. I should have it ready by Wednesday evening so you can test it on Thursday morning."
+            },
+            {
+                "time": "00:01:50",
+                "speaker": "Srini",
+                "text": "Perfect. Ananya, also make sure to document the API endpoints in Swagger for the rest of the team. Bruno, do we have the client feedback from the site visit to the Chennai water facility yesterday?"
+            },
+            {
+                "time": "00:02:10",
+                "speaker": "Bruno",
+                "text": "Yes. The client said the crawler needs to be waterproof up to 5 meters. That\u2019s a new requirement we didn't account for in the initial scope. We might need to adjust the casing material budget and re-evaluate the O-ring seals."
+            },
+            {
+                "time": "00:02:45",
+                "speaker": "Srini",
+                "text": "Waterproofing up to 5 meters is a major change. Let\u2019s schedule a separate meeting with the hardware team tomorrow at 10 AM. We\u2019ll need to re-evaluate the Bill of Materials (BOM) before we order the next batch of prototypes."
+            },
+            {
+                "time": "00:03:15",
+                "speaker": "Ananya",
+                "text": "I'll check if the current sensor housing can handle that pressure or if we need a complete redesign."
+            },
+            {
+                "time": "00:03:30",
+                "speaker": "Srini",
+                "text": "Thanks, Ananya. Let's wrap this up and get back to the sprint tasks."
+            },
+            {
+                "time": "09:00:00",
+                "speaker": "Sarah",
+                "text": "Good morning everyone. We must finalize the Q3 roadmap today. Marcus, can you give us an update on the backend migration?"
+            },
+            {
+                "time": "09:00:30",
+                "speaker": "Marcus",
+                "text": "We are currently refactoring the user authentication module. I will implement the new OAuth flow by next Tuesday. It's crucial that we test this thoroughly before the release."
+            },
+            {
+                "time": "09:01:15",
+                "speaker": "Leo",
+                "text": "The UI components for the login screen are ready. I plan to send the Figma files to the engineering team this afternoon."
+            },
+            {
+                "time": "09:01:45",
+                "speaker": "Chloe",
+                "text": "From a marketing perspective, we need the landing page updated before the campaign launches on August 25th."
+            },
+            {
+                "time": "09:02:10",
+                "speaker": "Marcus",
+                "text": "I can schedule a quick review of the landing page metrics. However, I expect some delays with the database integration."
+            },
+            {
+                "time": "09:02:45",
+                "speaker": "Sarah",
+                "text": "That's a major concern. We have to guarantee a smooth launch. Marcus, please assign someone to investigate the database bottlenecks immediately."
+            },
+            {
+                "time": "09:03:20",
+                "speaker": "Marcus",
+                "text": "Understood. I will task David with analyzing the database queries tomorrow morning."
+            },
+            {
+                "time": "09:03:55",
+                "speaker": "Chloe",
+                "text": "Great. I'll draft the press release once David confirms the system is stable."
+            },
+            {
+                "time": "09:04:20",
+                "speaker": "Sarah",
+                "text": "Excellent. Let's reconvene on Thursday to evaluate the progress."
+            }
+        ]
+    }
+}

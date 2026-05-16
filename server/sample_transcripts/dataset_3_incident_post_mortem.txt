@@ -1,0 +1,10 @@
+Meeting Transcript: Outage Post-Mortem (INC-402)
+Date: August 17, 2026
+Participants: Marcus (Engineering), David (DevOps), Sarah (Product)
+
+[11:00:00] Sarah: Let's review yesterday's outage. David, what caused the 502 errors?
+[11:00:45] David: A memory leak in the Node.js service caused the pods to OOM crash. The autoscaler couldn't keep up.
+[11:01:30] Marcus: We must implement stricter memory limits. I will configure the Kubernetes limits by Wednesday.
+[11:02:00] Sarah: Why didn't DataDog alert us before it crashed?
+[11:03:00] David: The alert thresholds were set too high. I will update the DataDog monitors this afternoon.
+[11:04:00] Marcus: We should also do a code audit. I'll assign someone to review the recent commits.

@@ -1,0 +1,10 @@
+Meeting Transcript: Docker Migration Sync
+Date: August 24, 2026
+Participants: David (DevOps), Marcus (Engineering), Alex (Frontend)
+
+[14:00:00] David: We're moving the frontend apps to Docker containers this week.
+[14:01:00] Alex: How will this affect our CI/CD pipeline?
+[14:02:00] David: It will speed it up. But I need you to update the build scripts.
+[14:03:00] Alex: Sure, I will update the NPM scripts tomorrow.
+[14:04:00] Marcus: We must ensure the local development environment mirrors production.
+[14:05:00] David: I will create a docker-compose file for local dev by Thursday.

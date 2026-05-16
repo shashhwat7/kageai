@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+client/nlp/node_modules/
+server/node_modules/
+
+# Python virtual environment
+venv/
+server/venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build outputs
+.next/
+dist/
+build/
+out/
+
+# Data and logs
+server/uploads/*
+!server/uploads/.gitkeep
+server/stderr.log
+server/stdout.log
+client/nlp/public/processed_data.json

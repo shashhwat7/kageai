@@ -1,0 +1,8 @@
+Meeting Transcript: Monthly All Hands
+Date: August 21, 2026
+Participants: Sarah (CEO), Marcus (CTO), Chloe (CMO)
+
+[09:00:00] Sarah: Welcome to the August All Hands. We hit our Q2 revenue targets!
+[09:05:00] Chloe: Marketing saw a 20% increase in conversions from the new campaign.
+[09:10:00] Marcus: Engineering has successfully migrated 80% of our infrastructure to AWS.
+[09:15:00] Sarah: Great work everyone. I will share the detailed financial report on Monday.

@@ -1,0 +1,10 @@
+Meeting Transcript: Quarterly Security Audit
+Date: August 20, 2026
+Participants: Riley (Security), Marcus (Engineering), Sarah (Product)
+
+[10:00:00] Riley: The penetration test results are in. We have two critical vulnerabilities.
+[10:00:45] Sarah: What's the impact? Are user credentials at risk?
+[10:01:30] Riley: No, but there's a stored XSS in the comments section. We must patch this immediately.
+[10:02:00] Marcus: Understood. I will push a hotfix for the XSS vulnerability this afternoon.
+[10:03:00] Riley: The second issue is an outdated OpenSSL library.
+[10:03:45] Marcus: I'll schedule a maintenance window to upgrade OpenSSL this weekend.

@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <defs>
+    <!-- Bar gradients - crystalline, glassy -->
+    <linearGradient id="barSheen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="18%" stop-color="#E8E0FF" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#A898F8" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#6050B8" stop-opacity="0.75"/>
+    </linearGradient>
+    <linearGradient id="barEdgeTop" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7060C0" stop-opacity="0.7"/>
+      <stop offset="30%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#7060C0" stop-opacity="0.7"/>
+    </linearGradient>
+    <linearGradient id="capLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#8878E8" stop-opacity="0.6"/>
+    </linearGradient>
+    <linearGradient id="capRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#8878E8" stop-opacity="0.6"/>
+    </linearGradient>
+
+    <!-- Blade gradients — each slightly different depth -->
+    <linearGradient id="b1" x1="15%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#B0A8FF" stop-opacity="1"/>
+      <stop offset="45%" stop-color="#7068D8" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#3828A0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="b2" x1="10%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9A90F0" stop-opacity="0.95"/>
+      <stop offset="50%" stop-color="#6058C8" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#2A2090" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="b3" x1="5%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#8880E0" stop-opacity="0.82"/>
+      <stop offset="55%" stop-color="#5048B0" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#201878" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="b4" x1="0%" y1="0%" x2="5%" y2="100%">
+      <stop offset="0%" stop-color="#D0C8FF" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#8878D0" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#4838A8" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Inner bar highlight -->
+    <linearGradient id="innerHL" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ══════════════════════════════════════
+       BAR 1 — top, widest
+  ══════════════════════════════════════ -->
+  <!-- shadow under bar -->
+  <rect x="68" y="106" width="464" height="8" rx="2" fill="#1A0F50" opacity="0.35"/>
+  <!-- main bar body -->
+  <rect x="60" y="72" width="480" height="34" rx="5" fill="url(#barSheen)"/>
+  <!-- top highlight edge -->
+  <rect x="60" y="72" width="480" height="7" rx="5" fill="url(#barEdgeTop)"/>
+  <!-- inner specular -->
+  <rect x="70" y="75" width="460" height="16" rx="3" fill="url(#innerHL)"/>
+  <!-- bottom lip shadow -->
+  <rect x="60" y="100" width="480" height="6" rx="3" fill="#3020A0" opacity="0.4"/>
+
+  <!-- Left gem cap -->
+  <polygon points="60,72  44,89  60,106  74,89" fill="url(#capLeft)" filter="url(#softglow)"/>
+  <polygon points="60,72  74,89  60,106" fill="#FFFFFF" opacity="0.15"/>
+  <!-- Right gem cap -->
+  <polygon points="540,72  556,89  540,106  526,89" fill="url(#capRight)" filter="url(#softglow)"/>
+  <polygon points="540,72  526,89  540,106" fill="#FFFFFF" opacity="0.15"/>
+
+  <!-- ══════════════════════════════════════
+       BAR 2 — middle
+  ══════════════════════════════════════ -->
+  <rect x="74" y="176" width="452" height="8" rx="2" fill="#1A0F50" opacity="0.3"/>
+  <rect x="68" y="144" width="464" height="32" rx="5" fill="url(#barSheen)" opacity="0.95"/>
+  <rect x="68" y="144" width="464" height="7" rx="5" fill="url(#barEdgeTop)" opacity="0.9"/>
+  <rect x="78" y="147" width="444" height="15" rx="3" fill="url(#innerHL)"/>
+  <rect x="68" y="170" width="464" height="6" rx="3" fill="#3020A0" opacity="0.35"/>
+  <polygon points="68,144  52,160  68,176  82,160" fill="url(#capLeft)" opacity="0.9" filter="url(#softglow)"/>
+  <polygon points="532,144  548,160  532,176  518,160" fill="url(#capRight)" opacity="0.9" filter="url(#softglow)"/>
+
+  <!-- ══════════════════════════════════════
+       BAR 3 — bottom, narrowest
+  ══════════════════════════════════════ -->
+  <rect x="84" y="242" width="432" height="8" rx="2" fill="#1A0F50" opacity="0.25"/>
+  <rect x="78" y="212" width="444" height="30" rx="5" fill="url(#barSheen)" opacity="0.88"/>
+  <rect x="78" y="212" width="444" height="7" rx="5" fill="url(#barEdgeTop)" opacity="0.82"/>
+  <rect x="88" y="215" width="424" height="14" rx="3" fill="url(#innerHL)"/>
+  <rect x="78" y="236" width="444" height="6" rx="3" fill="#3020A0" opacity="0.3"/>
+  <polygon points="78,212  62,227  78,242  92,227" fill="url(#capLeft)" opacity="0.8" filter="url(#softglow)"/>
+  <polygon points="522,212  538,227  522,242  508,227" fill="url(#capRight)" opacity="0.8" filter="url(#softglow)"/>
+
+  <!-- ══════════════════════════════════════
+       BLADES — four descending, fading
+  ══════════════════════════════════════ -->
+
+  <!-- BLADE 1 — leftmost, tallest -->
+  <polygon points="80,268  158,268  154,272  166,492  140,520  114,506  102,272" fill="url(#b1)" filter="url(#softglow)"/>
+  <!-- bevel highlight left edge -->
+  <polygon points="102,272  80,268  84,278  104,282" fill="#FFFFFF" opacity="0.4"/>
+  <!-- inner face sheen -->
+  <polygon points="108,272  148,272  150,320  106,316" fill="#FFFFFF" opacity="0.12"/>
+
+  <!-- BLADE 2 -->
+  <polygon points="188,268  262,268  258,272  268,472  244,498  220,486  210,272" fill="url(#b2)" filter="url(#softglow)"/>
+  <polygon points="210,272  188,268  192,278  212,282" fill="#FFFFFF" opacity="0.32"/>
+  <polygon points="216,272  252,272  254,316  214,312" fill="#FFFFFF" opacity="0.1"/>
+
+  <!-- BLADE 3 -->
+  <polygon points="292,268  362,268  360,272  366,450  344,476  322,464  316,272" fill="url(#b3)"/>
+  <polygon points="316,272  292,268  296,278  318,282" fill="#FFFFFF" opacity="0.22"/>
+
+  <!-- BLADE 4 — rightmost, most ethereal, slightly taller with curved notch tip -->
+  <polygon points="392,268  480,268  486,272  488,428  462,462  434,448  418,272" fill="url(#b4)"/>
+  <!-- notch blade tip detail -->
+  <polygon points="462,462  488,428  498,454  472,474" fill="#9888E8" opacity="0.35"/>
+  <polygon points="418,272  392,268  396,278  420,282" fill="#FFFFFF" opacity="0.15"/>
+
+</svg>
