@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2 } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -34,6 +34,7 @@ interface TranscriptData {
 interface MeetingData {
   title: string;
   summary: {
+    total_speakers?: number;
     keywords: string[];
     executive_summary?: SummarySentence[];
   };
@@ -153,6 +154,138 @@ const ShadowSuggestion = ({ meeting }: { meeting: MeetingData | null }) => {
   );
 };
 
+interface TouristAudit {
+  id: string;
+  name: string;
+  documentType: "Aadhaar" | "Passport";
+  documentId: string;
+  circuit: "Spiritual Circuit (Varanasi-Ayodhya)" | "Heritage Circuit (Rajasthan Forts)" | "Coastal Circuit (Kerala Backwaters)";
+  itineraryDate: string;
+  hotelName: string;
+  checkInDate: string;
+  biometricsHash: string;
+  verificationNode: string;
+  status: "Verified" | "Mismatch Alert" | "Pending Review";
+}
+
+const HISTORICAL_MEETINGS: MeetingData[] = [
+  {
+    title: "Hardware Casing & Pressure Threshold Review",
+    timestamp: "2026-05-18, 10:00:00 AM",
+    summary: {
+      total_speakers: 4,
+      keywords: ["Waterproofing", "Casing Material", "O-ring Seals", "Pressure Testing", "Bill of Materials"],
+      executive_summary: [
+        { speaker: "Executive Overview", text: "Reviewed pressure testing data for the crawler housing under 5 meters of depth." },
+        { speaker: "Key Insights", text: "Found that standard acrylic tubing failed at 3.2 bars. The team discussed switching to aluminum casing or polycarbonate tubing." },
+        { speaker: "Resolution", text: "Decided to increase the casing budget by $450 to purchase heavy-duty polycarbonate casing. O-ring seals must be upgraded to dual silicon." }
+      ]
+    },
+    analytics: {
+      "Srini": { participation: "40%", sentiment: "Determined", role: "Lead" },
+      "Rahul": { participation: "10%", sentiment: "Neutral", role: "Frontend" },
+      "Ananya": { participation: "35%", sentiment: "Optimistic", role: "Backend" },
+      "Bruno": { participation: "15%", sentiment: "Anxious", role: "Product" }
+    },
+    conflicts: {
+      contradictions: [
+        "Hardware casing switch to aluminum increases weight by 1.2kg, which exceeds the motor payload limit of 800g. \n \n 💡 AI Suggestion: Switch to heavy-duty polycarbonate casing instead of aluminum to keep weight under 400g while maintaining the 5-bar pressure threshold."
+      ],
+      unresolved: [
+        "No pressure testing rigs are available locally for depths greater than 3 meters. \n \n 💡 AI Suggestion: Partner with Chennai Ocean Tech institute for high-pressure chamber testing."
+      ]
+    },
+    action_items: [
+      { assigned_to: "BRUNO", task: "Procure heavy-duty polycarbonate casing samples for pressure testing", priority: "High", deadlines: ["Friday morning"] },
+      { assigned_to: "SRINI", task: "Contact Chennai Ocean Tech institute for pressure testing facility access", priority: "Medium", deadlines: ["Next Tuesday"] }
+    ],
+    transcript: {
+      segments: [
+        { time: "00:00:05", speaker: "Srini", text: "Let's review the waterproofing casing. Acrylic isn't holding up." },
+        { time: "00:01:20", speaker: "Bruno", text: "Aluminum works but it's too heavy. It will overload our active motors." },
+        { time: "00:02:10", speaker: "Ananya", text: "Switching to thick polycarbonate keeps it lightweight and pressure-resistant." }
+      ]
+    },
+    ai_recommendation: "Switch casing materials to polycarbonate to resolve the weight vs pressure structural conflict."
+  },
+  {
+    title: "API Architecture & Real-Time Telemetry Bridge",
+    timestamp: "2026-05-15, 02:00:00 PM",
+    summary: {
+      total_speakers: 3,
+      keywords: ["JSON bridge", "Telemetry", "WebSockets", "API Integration", "Telemetry Parsing"],
+      executive_summary: [
+        { speaker: "Executive Overview", text: "Designed the telemetry bridge for piping raw binary data from crawler to dashboard." },
+        { speaker: "Key Insights", text: "Determined that REST endpoints will have too much latency. WebSockets are required for real-time telemetry." },
+        { speaker: "Resolution", text: "Agreed to use Socket.io for bidirectional communication. Rahul will implement the frontend hooks, Ananya will implement the server bridge." }
+      ]
+    },
+    analytics: {
+      "Rahul": { participation: "40%", sentiment: "Neutral", role: "Frontend" },
+      "Ananya": { participation: "45%", sentiment: "Optimistic", role: "Backend" },
+      "Srini": { participation: "15%", sentiment: "Neutral", role: "Lead" }
+    },
+    conflicts: {
+      contradictions: [
+        "Rahul wants to use REST polling for simplicity, while Ananya states that polling every 100ms will overload the server. \n \n 💡 AI Suggestion: Standardize on Socket.io for low-latency telemetry updates."
+      ],
+      unresolved: [
+        "Security protocol for WebSocket authentication was not finalized. \n \n 💡 AI Suggestion: Implement short-lived JWTs via the query parameter during the socket handshake."
+      ]
+    },
+    action_items: [
+      { assigned_to: "RAHUL", task: "Implement React Socket.io listener hooks", priority: "High", deadlines: ["Monday afternoon"] },
+      { assigned_to: "ANANYA", task: "Setup Socket.io gateway server on Node.js backend", priority: "High", deadlines: ["Monday afternoon"] }
+    ],
+    transcript: {
+      segments: [
+        { time: "00:00:10", speaker: "Rahul", text: "Can we just use REST polling for telemetry? It's much easier to implement." },
+        { time: "00:00:55", speaker: "Ananya", text: "No, polling every 100ms will melt our server. WebSockets are necessary here." }
+      ]
+    },
+    ai_recommendation: "Implement WebSocket gateway with Socket.io to achieve real-time telemetry bridge safely."
+  },
+  {
+    title: "Sprint 3 Scope & Budget Alignment",
+    timestamp: "2026-05-10, 11:30:00 AM",
+    summary: {
+      total_speakers: 4,
+      keywords: ["Budget", "Scope", "Sprint Timeline", "TMS Integration"],
+      executive_summary: [
+        { speaker: "Executive Overview", text: "Reviewed sprint velocity and client milestone alignment for TMS launch." },
+        { speaker: "Key Insights", text: "Client requested early integration of the Tourist Audit Verification Table before the end of May." },
+        { speaker: "Resolution", text: "Agreed to prioritize the Tourist Verification dashboard inside the sprint and defer the telemetry graphs." }
+      ]
+    },
+    analytics: {
+      "Srini": { participation: "30%", sentiment: "Determined", role: "Lead" },
+      "Rahul": { participation: "25%", sentiment: "Neutral", role: "Frontend" },
+      "Ananya": { participation: "20%", sentiment: "Optimistic", role: "Backend" },
+      "Bruno": { participation: "25%", sentiment: "Concerned", role: "Product" }
+    },
+    conflicts: {
+      contradictions: [
+        "Rahul notes that adding the TMS audit table in this sprint will delay the real-time telemetry graphs, but Bruno says the client insists on verification functionality. \n \n 💡 AI Suggestion: Defer the advanced telemetry visualizer to Sprint 4 and implement the TMS Audit table now."
+      ],
+      unresolved: [
+        "How to query the government Aadhaar API in sandbox mode. \n \n 💡 AI Suggestion: Use a mock sandbox service with exact schema matching for the audit logs."
+      ]
+    },
+    action_items: [
+      { assigned_to: "RAHUL", task: "Build the high-density Bento Box card for India TMS Audit with Aadhaar/Passport validation", priority: "High", deadlines: ["This Friday"] },
+      { assigned_to: "SRINI", task: "Setup mock API gateway for government identity database cross-checks", priority: "Medium", deadlines: ["Next Wednesday"] }
+    ],
+    transcript: {
+      segments: [
+        { time: "00:00:15", speaker: "Bruno", text: "The client needs the Aadhaar verification table running ASAP." },
+        { time: "00:01:00", speaker: "Rahul", text: "That means pushing out our beautiful telemetry graphs to next sprint." },
+        { time: "00:02:15", speaker: "Srini", text: "Yes, let's prioritize the TMS audit table first. It's high priority." }
+      ]
+    },
+    ai_recommendation: "Re-prioritize sprint checklist to deploy the India TMS logistics audit cell immediately."
+  }
+];
+
 export default function NLPDashboard() {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300, 500], [1, 0.5, 0]);
@@ -183,6 +316,84 @@ export default function NLPDashboard() {
   const [activeTab, setActiveTab] = useState<'summary' | 'members' | 'actions' | 'transcript' | 'conflicts'>('summary');
   const [resolvedActions, setResolvedActions] = useState<Set<number>>(new Set());
   const [showAIRecommendation, setShowAIRecommendation] = useState<boolean>(true);
+
+  // Highlight Mode & Export States
+  const [highlightMode, setHighlightMode] = useState<boolean>(false);
+  const [highlightedSentences, setHighlightedSentences] = useState<Set<number>>(new Set());
+
+  // Chatbot Drawer States
+  const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+  const [chatInput, setChatInput] = useState<string>("");
+  const [chatHistory, setChatHistory] = useState<Array<{ sender: 'user' | 'kage'; text: string }>>([
+    { sender: 'kage', text: "Hello! I am Kage, your Lead Project Architect and Meeting Intelligence Analyst. Ask me anything about the active meeting, draft follow-up emails, or analyze technical conflicts!" }
+  ]);
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+
+  // --- India-Originated TMS Tourist Audit & Logistics States ---
+  const [tourists, setTourists] = useState<TouristAudit[]>([
+    {
+      id: "TMS-001",
+      name: "Rajesh Kumar",
+      documentType: "Aadhaar",
+      documentId: "XXXX-XXXX-8924",
+      circuit: "Spiritual Circuit (Varanasi-Ayodhya)",
+      itineraryDate: "2026-05-22T10:00:00Z",
+      hotelName: "Ganges Grand Residency, Varanasi",
+      checkInDate: "2026-05-22T12:30:00Z",
+      biometricsHash: "SHA256:8f4c2e5a1b3c9d7e8f...",
+      verificationNode: "Node-VAR-449",
+      status: "Verified"
+    },
+    {
+      id: "TMS-002",
+      name: "Priya Sharma",
+      documentType: "Passport",
+      documentId: "Z84210XX",
+      circuit: "Heritage Circuit (Rajasthan Forts)",
+      itineraryDate: "2026-05-23T09:00:00Z",
+      hotelName: "Jodhpur Palace View, Jodhpur",
+      checkInDate: "2026-05-24T18:00:00Z", // 33 hours (>24h delta)
+      biometricsHash: "SHA256:d3a91f5c6b7e8d9a0f...",
+      verificationNode: "Node-JOD-582",
+      status: "Mismatch Alert"
+    },
+    {
+      id: "TMS-003",
+      name: "Amit Patel",
+      documentType: "Aadhaar",
+      documentId: "XXXX-XXXX-3419",
+      circuit: "Coastal Circuit (Kerala Backwaters)",
+      itineraryDate: "2026-05-25T14:00:00Z",
+      hotelName: "Kumarakom Lake Resort, Kerala",
+      checkInDate: "2026-05-25T15:15:00Z", // 1.25 hours (OK)
+      biometricsHash: "SHA256:ef2b5a6c7d8e9f0a1b...",
+      verificationNode: "Node-COK-881",
+      status: "Verified"
+    },
+    {
+      id: "TMS-004",
+      name: "Sunita Rao",
+      documentType: "Passport",
+      documentId: "Y99318XX",
+      circuit: "Heritage Circuit (Rajasthan Forts)",
+      itineraryDate: "2026-05-26T08:00:00Z",
+      hotelName: "Jaipur Heritage Inn, Jaipur",
+      checkInDate: "2026-05-27T15:30:00Z", // 31.5 hours (>24h delta)
+      biometricsHash: "SHA256:a1e2f4c5b6d7e8f9a0...",
+      verificationNode: "Node-JAI-104",
+      status: "Mismatch Alert"
+    }
+  ]);
+  const [expandedTouristId, setExpandedTouristId] = useState<string | null>(null);
+
+  // --- Pre-meeting Brief States ---
+  const [briefTopic, setBriefTopic] = useState<string>("");
+  const [briefResults, setBriefResults] = useState<any>(null);
+
+  // --- Conflict Heatmap States ---
+  const [heatmapHoverCell, setHeatmapHoverCell] = useState<{ topicIdx: number; meetingIdx: number } | null>(null);
+
+
   
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
@@ -219,6 +430,8 @@ export default function NLPDashboard() {
   useEffect(() => {
     setResolvedActions(new Set());
     setShowAIRecommendation(true);
+    setHighlightMode(false);
+    setHighlightedSentences(new Set());
   }, [selectedMeeting]);
 
   useEffect(() => {
@@ -227,10 +440,417 @@ export default function NLPDashboard() {
       .then((json: MeetingData) => {
         if (!json.title) json.title = "Legacy Uploaded Meeting";
         if (!json.timestamp) json.timestamp = new Date().toLocaleString();
-        setPastMeetings([json]);
+        setPastMeetings([json, ...HISTORICAL_MEETINGS]);
       })
-      .catch((e) => console.log("No initial data found", e));
+      .catch((e) => {
+        console.log("No initial data found, using historical mocks", e);
+        setPastMeetings(HISTORICAL_MEETINGS);
+      });
   }, []);
+
+
+
+  // --- India-Originated TMS Helpers ---
+  const calculateCheckInDelta = (checkInStr: string, itineraryStr: string) => {
+    const checkIn = new Date(checkInStr);
+    const itinerary = new Date(itineraryStr);
+    const diffMs = Math.abs(checkIn.getTime() - itinerary.getTime());
+    return diffMs / (1000 * 60 * 60); // Difference in hours
+  };
+
+  // --- Pre-meeting Brief Helper ---
+  const generatePreMeetingBrief = (topic: string) => {
+    if (!topic.trim()) {
+      setBriefResults(null);
+      return;
+    }
+    const cleanTopic = topic.toLowerCase();
+    
+    const matches = pastMeetings.filter(m => {
+      const titleMatch = m.title.toLowerCase().includes(cleanTopic);
+      const keywordMatch = m.summary.keywords.some(k => k.toLowerCase().includes(cleanTopic));
+      const summaryMatch = m.summary.executive_summary?.some(s => s.text.toLowerCase().includes(cleanTopic));
+      return titleMatch || keywordMatch || summaryMatch;
+    });
+
+    if (matches.length === 0) {
+      setBriefResults({
+        topic,
+        found: false,
+        blockers: [],
+        decisions: [],
+        attendees: {},
+        actionItems: []
+      });
+      return;
+    }
+
+    const blockers: string[] = [];
+    matches.forEach(m => {
+      if (m.conflicts) {
+        m.conflicts.contradictions.forEach(c => {
+          if (c.toLowerCase().includes(cleanTopic) || cleanTopic.length > 2) {
+            blockers.push(`${m.title}: ${c}`);
+          }
+        });
+        m.conflicts.unresolved.forEach(u => {
+          if (u.toLowerCase().includes(cleanTopic) || cleanTopic.length > 2) {
+            blockers.push(`${m.title}: ${u}`);
+          }
+        });
+      }
+    });
+
+    const decisions: string[] = [];
+    matches.forEach(m => {
+      m.summary.executive_summary?.forEach(s => {
+        if (s.speaker.toLowerCase().includes("resolution") || s.text.toLowerCase().includes("decided") || s.text.toLowerCase().includes("resolved") || s.text.toLowerCase().includes("agreed") || s.text.toLowerCase().includes("insights")) {
+          decisions.push(`${m.title} (${s.speaker}): ${s.text}`);
+        }
+      });
+    });
+
+    const attendees: Record<string, { role: string; participation: string; sentiment: string; meetingsDiscussed: number }> = {};
+    matches.forEach(m => {
+      Object.entries(m.analytics).forEach(([name, stats]) => {
+        if (!attendees[name]) {
+          attendees[name] = {
+            role: stats.role || "Participant",
+            participation: stats.participation,
+            sentiment: stats.sentiment,
+            meetingsDiscussed: 1
+          };
+        } else {
+          attendees[name].meetingsDiscussed += 1;
+        }
+      });
+    });
+
+    const actionItems: any[] = [];
+    matches.forEach(m => {
+      m.action_items.forEach(item => {
+        const cleanTask = item.task.toLowerCase();
+        if (cleanTask.includes(cleanTopic) || Object.keys(attendees).some(name => name.toLowerCase() === item.assigned_to.toLowerCase())) {
+          actionItems.push({
+            meeting: m.title,
+            ...item
+          });
+        }
+      });
+    });
+
+    setBriefResults({
+      topic,
+      found: true,
+      blockers: Array.from(new Set(blockers)),
+      decisions: Array.from(new Set(decisions)),
+      attendees,
+      actionItems
+    });
+  };
+
+  const exportPreMeetingBrief = (format: 'download' | 'copy') => {
+    if (!briefResults || !briefResults.found) return;
+
+    let md = `# KAGE.ai Intell_Brief: ${briefResults.topic.toUpperCase()}\n`;
+    md += `*Generated dynamically on ${new Date().toLocaleString()}*\n`;
+    md += `========================================\n\n`;
+
+    md += `## ⚠️ Open Blockers & Contradictions\n`;
+    if (briefResults.blockers.length === 0) {
+      md += `*No active blockers detected regarding this topic.*\n\n`;
+    } else {
+      briefResults.blockers.forEach((b: string) => {
+        md += `- ${b}\n`;
+      });
+      md += `\n`;
+    }
+
+    md += `## 🤝 Prior Decisions & Resolutions\n`;
+    if (briefResults.decisions.length === 0) {
+      md += `*No historical decisions recorded for this topic.*\n\n`;
+    } else {
+      briefResults.decisions.forEach((d: string) => {
+        md += `- ${d}\n`;
+      });
+      md += `\n`;
+    }
+
+    md += `## 👥 Relevant Attendee History & Sentiment\n`;
+    Object.entries(briefResults.attendees).forEach(([name, stats]: [string, any]) => {
+      md += `- **${name}** (${stats.role}): ${stats.participation} participation avg, Sentiment trend: *${stats.sentiment}* (${stats.meetingsDiscussed} sync match(es))\n`;
+    });
+    md += `\n`;
+
+    md += `## 📋 Associated Action Items\n`;
+    if (briefResults.actionItems.length === 0) {
+      md += `*No action items associated with this topic or attendees.*\n\n`;
+    } else {
+      briefResults.actionItems.forEach((item: any) => {
+        md += `- **${item.assigned_to}**: ${item.task} [${item.priority || 'Medium'}] (Due: ${item.deadlines.join(', ')} in *${item.meeting}*)\n`;
+      });
+      md += `\n`;
+    }
+
+    if (format === 'copy') {
+      navigator.clipboard.writeText(md).then(() => {
+        alert("Pre-meeting Brief copied to clipboard as Markdown!");
+      });
+    } else {
+      const filename = `Kage_Brief_${briefResults.topic.replace(/\s+/g, '_')}.md`;
+      const element = document.createElement("a");
+      const file = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      element.href = URL.createObjectURL(file);
+      element.download = filename;
+      element.click();
+      URL.revokeObjectURL(element.href);
+    }
+  };
+
+  // --- Conflict Heatmap Helpers ---
+  const TOPIC_CLUSTERS = [
+    { id: "waterproofing", label: "Waterproofing & Casing" },
+    { id: "budget", label: "Sprint Budget & Scope" },
+    { id: "telemetry", label: "Telemetry & Sockets" },
+    { id: "frontend", label: "React Frontend App" },
+    { id: "tms", label: "Aadhaar & Passport Audit" }
+  ];
+
+  const getHeatIntensity = (topicId: string, meeting: MeetingData) => {
+    const cleanTitle = meeting.title.toLowerCase();
+    const cleanKeywords = meeting.summary.keywords.map(k => k.toLowerCase());
+    const cleanContradictions = meeting.conflicts?.contradictions.map(c => c.toLowerCase()) || [];
+    const cleanUnresolved = meeting.conflicts?.unresolved.map(u => u.toLowerCase()) || [];
+
+    let hasHigh = false;
+    if (topicId === "waterproofing" && (cleanTitle.includes("waterproof") || cleanTitle.includes("casing") || cleanKeywords.includes("waterproofing"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("waterproof") || c.includes("casing") || c.includes("material") || c.includes("pressure"));
+    } else if (topicId === "budget" && (cleanTitle.includes("budget") || cleanTitle.includes("scope") || cleanKeywords.includes("budget") || cleanKeywords.includes("scope"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("budget") || c.includes("scope") || c.includes("bill of materials"));
+    } else if (topicId === "telemetry" && (cleanTitle.includes("telemetry") || cleanTitle.includes("api") || cleanTitle.includes("bridge") || cleanKeywords.includes("telemetry") || cleanKeywords.includes("json bridge"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("telemetry") || c.includes("polling") || c.includes("websocket") || c.includes("auth"));
+    } else if (topicId === "frontend" && (cleanTitle.includes("frontend") || cleanTitle.includes("react") || cleanKeywords.includes("react frontend"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("frontend") || c.includes("react") || c.includes("display"));
+    } else if (topicId === "tms" && (cleanTitle.includes("tms") || cleanTitle.includes("tourist") || cleanKeywords.includes("tms") || cleanKeywords.includes("budget"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("tms") || c.includes("tourist") || c.includes("aadhaar") || c.includes("passport") || c.includes("verification"));
+    }
+
+    if (hasHigh) return { level: "high", color: "bg-[#FF9933] shadow-[0_0_15px_rgba(255,153,51,0.85)] animate-pulse", label: "Critical Blocker / Contradiction" };
+
+    let hasMedium = false;
+    if (topicId === "waterproofing") {
+      hasMedium = cleanUnresolved.some(u => u.includes("waterproof") || u.includes("pressure") || u.includes("rig")) || cleanContradictions.some(c => c.includes("waterproof"));
+    } else if (topicId === "budget") {
+      hasMedium = cleanUnresolved.some(u => u.includes("budget") || u.includes("timeline") || u.includes("bom")) || cleanContradictions.some(c => c.includes("budget"));
+    } else if (topicId === "telemetry") {
+      hasMedium = cleanUnresolved.some(u => u.includes("telemetry") || u.includes("security") || u.includes("websocket")) || cleanContradictions.some(c => c.includes("polling"));
+    } else if (topicId === "frontend") {
+      hasMedium = cleanUnresolved.some(u => u.includes("frontend") || u.includes("graph")) || cleanContradictions.some(c => c.includes("frontend"));
+    } else if (topicId === "tms") {
+      hasMedium = cleanUnresolved.some(u => u.includes("tms") || u.includes("aadhaar") || u.includes("api")) || cleanContradictions.some(c => c.includes("tms"));
+    }
+
+    if (hasMedium) return { level: "medium", color: "bg-[#FF9933]/60 shadow-[0_0_8px_rgba(255,153,51,0.45)]", label: "Minor Blocker / Active Contradiction" };
+
+    let isDiscussed = false;
+    if (topicId === "waterproofing") {
+      isDiscussed = cleanKeywords.includes("waterproofing") || cleanKeywords.includes("cad designs") || cleanKeywords.includes("pipeline robotics");
+    } else if (topicId === "budget") {
+      isDiscussed = cleanKeywords.includes("budget") || cleanKeywords.includes("scope") || cleanKeywords.includes("bill of materials");
+    } else if (topicId === "telemetry") {
+      isDiscussed = cleanKeywords.includes("json bridge") || cleanKeywords.includes("swagger") || cleanKeywords.includes("telemetry") || cleanKeywords.includes("node.js middleware");
+    } else if (topicId === "frontend") {
+      isDiscussed = cleanKeywords.includes("react frontend") || cleanKeywords.includes("json bridge");
+    } else if (topicId === "tms") {
+      isDiscussed = cleanKeywords.includes("tms integration") || cleanKeywords.includes("budget") || cleanKeywords.includes("scope");
+    }
+
+    if (isDiscussed) return { level: "discussed", color: "bg-[#000080]/90 border border-[#FF9933]/30 shadow-[0_0_10px_rgba(0,0,128,0.3)]", label: "Discussed Neutrally" };
+
+    return { level: "none", color: "bg-slate-800/20 border border-slate-700/20", label: "Not Discussed" };
+  };
+
+  const getHeatmapCellDetail = (topicIdx: number, meetingIdx: number) => {
+    const topic = TOPIC_CLUSTERS[topicIdx];
+    const meeting = pastMeetings[meetingIdx];
+    if (!topic || !meeting) return null;
+
+    const heat = getHeatIntensity(topic.id, meeting);
+    let detailsText = "Discussed neutrally during sync. Status stable.";
+    
+    if (heat.level === "high") {
+      detailsText = meeting.conflicts?.contradictions.find(c => {
+        const lc = c.toLowerCase();
+        return lc.includes(topic.id) || (topic.id === "tms" && (lc.includes("aadhaar") || lc.includes("passport") || lc.includes("verification")));
+      }) || meeting.conflicts?.contradictions[0] || "Critical structural conflict identified.";
+    } else if (heat.level === "medium") {
+      detailsText = meeting.conflicts?.unresolved.find(u => {
+        const lu = u.toLowerCase();
+        return lu.includes(topic.id) || (topic.id === "tms" && (lu.includes("aadhaar") || lu.includes("passport") || lu.includes("verification")));
+      }) || meeting.conflicts?.unresolved[0] || "Active pending blocker under review.";
+    }
+
+    return {
+      meetingTitle: meeting.title,
+      topicLabel: topic.label,
+      level: heat.level,
+      labelText: heat.label,
+      details: detailsText
+    };
+  };
+
+  const exportAsFile = (content: string, filename: string, contentType: string) => {
+    const a = document.createElement("a");
+    const file = new Blob([content], { type: contentType });
+    a.href = URL.createObjectURL(file);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const getMarkdownContent = (highlightsOnly = false) => {
+    if (!selectedMeeting) return "";
+    let md = `# Meeting Audit Report: ${selectedMeeting.title}\n`;
+    md += `**Timestamp:** ${selectedMeeting.timestamp || 'N/A'}\n\n`;
+    
+    md += `## Executive Summary\n`;
+    const summarySentences = selectedMeeting.summary.executive_summary || [];
+    if (highlightsOnly) {
+      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
+      if (highlighted.length === 0) {
+        md += `*No sections highlighted.*\n`;
+      } else {
+        highlighted.forEach(s => {
+          md += `> **[HIGHLIGHTED]** *${s.speaker}*: ${s.text}\n\n`;
+        });
+      }
+    } else {
+      summarySentences.forEach((s, idx) => {
+        const isH = highlightedSentences.has(idx);
+        md += `${isH ? '> **[HIGHLIGHTED]** ' : ''}*${s.speaker}*: ${s.text}\n\n`;
+      });
+    }
+
+    if (!highlightsOnly) {
+      md += `## Regulated Action Items & Commitments\n`;
+      selectedMeeting.action_items.forEach((item, idx) => {
+        md += `${idx + 1}. **${item.assigned_to}**: ${item.task} (Priority: ${item.priority || 'Medium'}, Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
+      });
+      md += `\n`;
+
+      if (selectedMeeting.conflicts) {
+        md += `## Technical Conflicts & Blockers\n`;
+        md += `### Contradictions\n`;
+        selectedMeeting.conflicts.contradictions.forEach(c => md += `- ${c}\n`);
+        md += `\n### Unresolved Blocker Items\n`;
+        selectedMeeting.conflicts.unresolved.forEach(u => md += `- ${u}\n`);
+      }
+    }
+    return md;
+  };
+
+  const getPlaintextContent = (highlightsOnly = false) => {
+    if (!selectedMeeting) return "";
+    let txt = `MEETING AUDIT REPORT: ${selectedMeeting.title}\n`;
+    txt += `Timestamp: ${selectedMeeting.timestamp || 'N/A'}\n`;
+    txt += `========================================\n\n`;
+    txt += `EXECUTIVE SUMMARY:\n`;
+    
+    const summarySentences = selectedMeeting.summary.executive_summary || [];
+    if (highlightsOnly) {
+      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
+      highlighted.forEach(s => {
+        txt += `[HIGHLIGHTED] ${s.speaker}: ${s.text}\n\n`;
+      });
+    } else {
+      summarySentences.forEach((s, idx) => {
+        const isH = highlightedSentences.has(idx);
+        txt += `${isH ? '[HIGHLIGHTED] ' : ''}${s.speaker}: ${s.text}\n\n`;
+      });
+    }
+
+    if (!highlightsOnly) {
+      txt += `REGULATED ACTION ITEMS & COMMITMENTS:\n`;
+      selectedMeeting.action_items.forEach((item, idx) => {
+        txt += `${idx + 1}. [${item.priority || 'Medium'}] ${item.assigned_to}: ${item.task} (Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
+      });
+      txt += `\n`;
+    }
+    return txt;
+  };
+
+  const handleExport = (format: 'md' | 'json' | 'txt' | 'copy', highlightsOnly = false) => {
+    if (!selectedMeeting) return;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `${selectedMeeting.title.replace(/\s+/g, '_')}_Audit_${dateStr}`;
+
+    if (format === 'md') {
+      const content = getMarkdownContent(highlightsOnly);
+      exportAsFile(content, `${filename}.md`, 'text/markdown;charset=utf-8');
+    } else if (format === 'txt') {
+      const content = getPlaintextContent(highlightsOnly);
+      exportAsFile(content, `${filename}.txt`, 'text/plain;charset=utf-8');
+    } else if (format === 'json') {
+      let content = "";
+      if (highlightsOnly) {
+        const highlighted = (selectedMeeting.summary.executive_summary || []).filter((_, idx) => highlightedSentences.has(idx));
+        content = JSON.stringify(highlighted, null, 2);
+      } else {
+        content = JSON.stringify(selectedMeeting, null, 2);
+      }
+      exportAsFile(content, `${filename}.json`, 'application/json;charset=utf-8');
+    } else if (format === 'copy') {
+      const content = getPlaintextContent(highlightsOnly);
+      navigator.clipboard.writeText(content).then(() => {
+        alert("Meeting summary copied to clipboard!");
+      }).catch(err => {
+        console.error("Could not copy text: ", err);
+      });
+    }
+  };
+
+  const handleSendMessage = async (customMessage?: string) => {
+    const textToSend = customMessage || chatInput;
+    if (!textToSend.trim() || chatLoading) return;
+
+    const userMsg = { sender: 'user' as const, text: textToSend };
+    setChatHistory(prev => [...prev, userMsg]);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: textToSend,
+          transcript: selectedMeeting || pastMeetings[0] || null,
+          history: chatHistory
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setChatHistory(prev => [...prev, { sender: 'kage' as const, text: data.reply }]);
+      } else {
+        setChatHistory(prev => [...prev, { sender: 'kage' as const, text: `Error: ${data.error || 'Failed to get reply.'}` }]);
+      }
+    } catch (err) {
+      console.error(err);
+      setChatHistory(prev => [...prev, { sender: 'kage' as const, text: "Error connecting to AI backend. Make sure the server is running." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const chatContainer = document.getElementById("chat-container");
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  }, [chatHistory, chatLoading]);
 
   const handleUpload = async () => {
     setUploading(true);
@@ -287,7 +907,7 @@ export default function NLPDashboard() {
   // Animation variants
   const fadeUpVariant = {
     hidden: { opacity: 0, y: 40 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } }
   };
 
   const staggerContainer = {
@@ -575,6 +1195,8 @@ export default function NLPDashboard() {
                   </div>
                 )}
               </div>
+
+
             </motion.div>
 
             {/* Right Sidebar */}
@@ -672,11 +1294,157 @@ export default function NLPDashboard() {
 
       {/* Minimal Floating Ask Kage */}
       <div className="fixed bottom-6 right-6 z-40 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-500">
-        <button className="flex items-center gap-3 bg-[#131316]/90 backdrop-blur-xl px-5 py-3 rounded-full border border-purple-500/30 shadow-[0_0_20px_rgba(128,90,213,0.15)] hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] transition-all group">
-          <Terminal size={16} className="text-purple-400 group-hover:text-purple-300" />
+        <button 
+          onClick={() => setIsChatOpen(true)}
+          className="flex items-center gap-3 bg-[#131316]/90 backdrop-blur-xl px-5 py-3 rounded-full border border-purple-500/30 shadow-[0_0_20px_rgba(128,90,213,0.15)] hover:border-[#000080]/60 hover:shadow-[0_0_30px_rgba(0,0,128,0.25)] transition-all group"
+        >
+          <Terminal size={16} className="text-[#FF9933] group-hover:text-[#FFaa55]" />
           <span className="text-xs font-bold text-slate-300 group-hover:text-white tracking-wide">Ask Kage</span>
           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse ml-1"></div>
         </button>
+      </div>
+
+      {/* Ask Kage Chatbot sliding drawer */}
+      <div 
+        className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-[#0A0A0C]/95 backdrop-blur-2xl border-l border-slate-800 shadow-2xl z-50 flex flex-col transition-all duration-300 transform ${
+          isChatOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-slate-800 bg-[#131316] flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-[#000080]/30 text-[#FF9933] rounded border border-[#000080]/50">
+              <Terminal size={16} />
+            </div>
+            <div>
+              <h3 className="font-bold text-white font-mono text-sm tracking-wide">Ask_Kage</h3>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedMeeting ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest">
+                  {selectedMeeting ? `Context: ${selectedMeeting.title}` : 'General Mode'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsChatOpen(false)}
+            className="p-1.5 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-all"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Scrollable Chat Area */}
+        <div 
+          id="chat-container"
+          className="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-slate-800 animate-in fade-in"
+        >
+          {chatHistory.map((msg, i) => (
+            <div 
+              key={i} 
+              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div 
+                className={`max-w-[85%] rounded-xl p-4 font-mono text-xs leading-relaxed ${
+                  msg.sender === 'user'
+                    ? 'bg-[#000080]/20 text-slate-200 border border-[#000080]/40 rounded-br-none'
+                    : 'bg-[#131316] text-slate-300 border border-slate-800 rounded-bl-none shadow-md'
+                }`}
+              >
+                {msg.sender === 'kage' ? (
+                  // Simple Safe Markdown Rendering for Bold, lists, code
+                  <div className="space-y-2 whitespace-pre-wrap">
+                    {msg.text.split('\n').map((line, idx) => {
+                      // Check for bold matches
+                      const boldRegex = /\*\*(.*?)\*\*/g;
+                      const parts = [];
+                      let lastIndex = 0;
+                      let match;
+                      while ((match = boldRegex.exec(line)) !== null) {
+                        if (match.index > lastIndex) {
+                          parts.push(line.substring(lastIndex, match.index));
+                        }
+                        parts.push(<strong key={match.index} className="text-white font-bold">{match[1]}</strong>);
+                        lastIndex = boldRegex.lastIndex;
+                      }
+                      if (lastIndex < line.length) {
+                        parts.push(line.substring(lastIndex));
+                      }
+                      
+                      const element = parts.length > 0 ? parts : line;
+                      
+                      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                        return (
+                          <div key={idx} className="flex gap-2 pl-2">
+                            <span className="text-[#FF9933]">•</span>
+                            <span>{element}</span>
+                          </div>
+                        );
+                      }
+                      return <p key={idx}>{element}</p>;
+                    })}
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap">{msg.text}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {chatLoading && (
+            <div className="flex justify-start">
+              <div className="bg-[#131316] border border-slate-800 rounded-xl rounded-bl-none p-4 max-w-[85%]">
+                <div className="flex items-center gap-1.5 h-3">
+                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-100"></div>
+                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-200"></div>
+                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-300"></div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Suggestion Chips */}
+        <div className="px-6 py-3 border-t border-slate-800/50 bg-[#0A0A0C] flex flex-wrap gap-2 shrink-0">
+          <button 
+            onClick={() => handleSendMessage("What were the key blockers or technical conflicts discussed?")}
+            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+          >
+            Blockers Audit
+          </button>
+          <button 
+            onClick={() => handleSendMessage("Draft a concise professional follow-up email for the action items.")}
+            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+          >
+            Draft Action Email
+          </button>
+          <button 
+            onClick={() => handleSendMessage("Summarize the roles, participation rate, and overall sentiment of the members.")}
+            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+          >
+            Speaker Roles & Sentiment
+          </button>
+        </div>
+
+        {/* Input area */}
+        <div className="p-6 border-t border-slate-800 bg-[#131316] flex gap-3 shrink-0">
+          <input 
+            type="text" 
+            placeholder="Ask Kage..."
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSendMessage();
+            }}
+            className="flex-1 px-4 py-2.5 bg-[#0A0A0C] border border-slate-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-[#000080]/50"
+          />
+          <button 
+            onClick={() => handleSendMessage()}
+            className="px-4 py-2.5 bg-[#000080] hover:bg-[#000099] text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors"
+          >
+            Send
+          </button>
+        </div>
       </div>
 
       {/* Expanded Meeting Modal */}
@@ -762,17 +1530,140 @@ export default function NLPDashboard() {
 
                   {/* Spotlight T5 Summary */}
                   {selectedMeeting.summary.executive_summary && selectedMeeting.summary.executive_summary.length > 0 && (
-                    <div className="bg-slate-100/95 backdrop-blur-xl border border-slate-300/50 rounded-xl p-10 shadow-[0_0_50px_rgba(168,85,247,0.1)] transform transition-transform">
+                    <div className="bg-slate-100/95 backdrop-blur-xl border border-slate-300/50 rounded-xl p-10 shadow-[0_0_50px_rgba(168,85,247,0.1)] transform transition-transform text-slate-800">
                       <div className="space-y-8">
-                        {selectedMeeting.summary.executive_summary.map((sum, i) => (
-                          <div key={i} className="flex flex-col gap-3">
-                            <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">{sum.speaker}</span>
-                            <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight">{sum.text}</p>
-                          </div>
-                        ))}
+                        {selectedMeeting.summary.executive_summary.map((sum, i) => {
+                          const isHighlighted = highlightedSentences.has(i);
+                          return (
+                            <div 
+                              key={i} 
+                              onClick={() => {
+                                if (highlightMode) {
+                                  const next = new Set(highlightedSentences);
+                                  if (next.has(i)) next.delete(i);
+                                  else next.add(i);
+                                  setHighlightedSentences(next);
+                                }
+                              }}
+                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative ${
+                                highlightMode 
+                                  ? 'cursor-pointer hover:bg-slate-200/50' 
+                                  : 'border border-transparent'
+                              } ${
+                                isHighlighted 
+                                  ? 'bg-white shadow-[0_10px_30px_rgba(0,0,128,0.08)] border-l-4 border-l-[#FF9933]' 
+                                  : 'border border-transparent'
+                              }`}
+                            >
+                              {isHighlighted && (
+                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-gradient-to-b from-[#FF9933] to-[#000080]" />
+                              )}
+                              <div className="flex justify-between items-center z-10">
+                                <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">
+                                  {sum.speaker}
+                                </span>
+                                {isHighlighted && (
+                                  <span className="text-[9px] font-mono font-bold text-[#FF9933] uppercase tracking-wider">
+                                    [Highlighted]
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight z-10">
+                                {sum.text}
+                              </p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
+
+                  {/* Export & Highlight Control Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 p-4 mt-6 bg-[#131316] border border-slate-800 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          setHighlightMode(!highlightMode);
+                          if (highlightMode) {
+                            setHighlightedSentences(new Set()); // Reset highlights
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-md text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 ${
+                          highlightMode 
+                            ? 'bg-[#FF9933] text-black shadow-[0_0_15px_rgba(255,153,51,0.4)]' 
+                            : 'bg-[#0A0A0C] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full ${highlightMode ? 'bg-black animate-pulse' : 'bg-[#FF9933]'}`}></span>
+                        {highlightMode ? 'Disable Highlight' : 'Highlight Mode'}
+                      </button>
+                      {highlightMode && highlightedSentences.size > 0 && (
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {highlightedSentences.size} sentence(s) selected
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative group">
+                        <button className="px-4 py-2 bg-[#000080] hover:bg-[#000099] text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
+                          <Upload size={12} className="rotate-180" /> Export Options
+                        </button>
+                        
+                        {/* Dropdown Menu */}
+                        <div className="absolute right-0 bottom-full mb-2 w-56 bg-[#131316] border border-slate-800 rounded-lg shadow-xl py-2 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 pointer-events-none group-hover:pointer-events-auto transition-all z-30">
+                          <button 
+                            onClick={() => handleExport('md')}
+                            className="w-full text-left px-4 py-2 text-xs font-mono text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                          >
+                            Download Markdown (.md)
+                          </button>
+                          <button 
+                            onClick={() => handleExport('json')}
+                            className="w-full text-left px-4 py-2 text-xs font-mono text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                          >
+                            Download JSON (.json)
+                          </button>
+                          <button 
+                            onClick={() => handleExport('txt')}
+                            className="w-full text-left px-4 py-2 text-xs font-mono text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                          >
+                            Download Plain Text (.txt)
+                          </button>
+                          <button 
+                            onClick={() => handleExport('copy')}
+                            className="w-full text-left px-4 py-2 text-xs font-mono text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                          >
+                            Copy to Clipboard
+                          </button>
+
+                          {highlightedSentences.size > 0 && (
+                            <>
+                              <div className="border-t border-slate-800 my-1"></div>
+                              <button 
+                                onClick={() => handleExport('md', true)}
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                              >
+                                Export Highlights Only (.md)
+                              </button>
+                              <button 
+                                onClick={() => handleExport('json', true)}
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                              >
+                                Export Highlights Only (.json)
+                              </button>
+                              <button 
+                                onClick={() => handleExport('copy', true)}
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                              >
+                                Copy Highlights Only
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
