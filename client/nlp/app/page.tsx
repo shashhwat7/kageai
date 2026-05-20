@@ -154,19 +154,7 @@ const ShadowSuggestion = ({ meeting }: { meeting: MeetingData | null }) => {
   );
 };
 
-interface TouristAudit {
-  id: string;
-  name: string;
-  documentType: "Aadhaar" | "Passport";
-  documentId: string;
-  circuit: "Spiritual Circuit (Varanasi-Ayodhya)" | "Heritage Circuit (Rajasthan Forts)" | "Coastal Circuit (Kerala Backwaters)";
-  itineraryDate: string;
-  hotelName: string;
-  checkInDate: string;
-  biometricsHash: string;
-  verificationNode: string;
-  status: "Verified" | "Mismatch Alert" | "Pending Review";
-}
+
 
 const HISTORICAL_MEETINGS: MeetingData[] = [
   {
@@ -250,11 +238,11 @@ const HISTORICAL_MEETINGS: MeetingData[] = [
     timestamp: "2026-05-10, 11:30:00 AM",
     summary: {
       total_speakers: 4,
-      keywords: ["Budget", "Scope", "Sprint Timeline", "TMS Integration"],
+      keywords: ["Budget", "Scope", "Sprint Timeline", "Core Architecture"],
       executive_summary: [
-        { speaker: "Executive Overview", text: "Reviewed sprint velocity and client milestone alignment for TMS launch." },
-        { speaker: "Key Insights", text: "Client requested early integration of the Tourist Audit Verification Table before the end of May." },
-        { speaker: "Resolution", text: "Agreed to prioritize the Tourist Verification dashboard inside the sprint and defer the telemetry graphs." }
+        { speaker: "Executive Overview", text: "Reviewed sprint velocity and client milestone alignment for core dashboard launch." },
+        { speaker: "Key Insights", text: "Client requested early integration of the real-time telemetry widget before the end of May." },
+        { speaker: "Resolution", text: "Agreed to prioritize the telemetry socket pipeline inside the sprint and defer the historical logs analytics." }
       ]
     },
     analytics: {
@@ -265,24 +253,24 @@ const HISTORICAL_MEETINGS: MeetingData[] = [
     },
     conflicts: {
       contradictions: [
-        "Rahul notes that adding the TMS audit table in this sprint will delay the real-time telemetry graphs, but Bruno says the client insists on verification functionality. \n \n 💡 AI Suggestion: Defer the advanced telemetry visualizer to Sprint 4 and implement the TMS Audit table now."
+        "Rahul notes that adding the telemetry socket pipeline in this sprint will delay the historical log analytics, but Bruno says the client insists on real-time widgets. \n \n 💡 AI Suggestion: Defer the advanced log visualizer to Sprint 4 and implement the telemetry socket pipeline now."
       ],
       unresolved: [
-        "How to query the government Aadhaar API in sandbox mode. \n \n 💡 AI Suggestion: Use a mock sandbox service with exact schema matching for the audit logs."
+        "How to query the system API securely in sandbox mode. \n \n 💡 AI Suggestion: Use a mock sandbox gateway with token header validation."
       ]
     },
     action_items: [
-      { assigned_to: "RAHUL", task: "Build the high-density Bento Box card for India TMS Audit with Aadhaar/Passport validation", priority: "High", deadlines: ["This Friday"] },
-      { assigned_to: "SRINI", task: "Setup mock API gateway for government identity database cross-checks", priority: "Medium", deadlines: ["Next Wednesday"] }
+      { assigned_to: "RAHUL", task: "Build the high-density Bento Box card for real-time telemetry analytics", priority: "High", deadlines: ["This Friday"] },
+      { assigned_to: "SRINI", task: "Setup mock gateway for hardware pipeline telemetry data feeds", priority: "Medium", deadlines: ["Next Wednesday"] }
     ],
     transcript: {
       segments: [
-        { time: "00:00:15", speaker: "Bruno", text: "The client needs the Aadhaar verification table running ASAP." },
-        { time: "00:01:00", speaker: "Rahul", text: "That means pushing out our beautiful telemetry graphs to next sprint." },
-        { time: "00:02:15", speaker: "Srini", text: "Yes, let's prioritize the TMS audit table first. It's high priority." }
+        { time: "00:00:15", speaker: "Bruno", text: "The client needs the telemetry pipeline running ASAP." },
+        { time: "00:01:00", speaker: "Rahul", text: "That means pushing out our beautiful log analytics to next sprint." },
+        { time: "00:02:15", speaker: "Srini", text: "Yes, let's prioritize the telemetry dashboard first. It's high priority." }
       ]
     },
-    ai_recommendation: "Re-prioritize sprint checklist to deploy the India TMS logistics audit cell immediately."
+    ai_recommendation: "Re-prioritize sprint checklist to deploy the real-time telemetry analytics dashboard immediately."
   }
 ];
 
@@ -329,62 +317,7 @@ export default function NLPDashboard() {
   ]);
   const [chatLoading, setChatLoading] = useState<boolean>(false);
 
-  // --- India-Originated TMS Tourist Audit & Logistics States ---
-  const [tourists, setTourists] = useState<TouristAudit[]>([
-    {
-      id: "TMS-001",
-      name: "Rajesh Kumar",
-      documentType: "Aadhaar",
-      documentId: "XXXX-XXXX-8924",
-      circuit: "Spiritual Circuit (Varanasi-Ayodhya)",
-      itineraryDate: "2026-05-22T10:00:00Z",
-      hotelName: "Ganges Grand Residency, Varanasi",
-      checkInDate: "2026-05-22T12:30:00Z",
-      biometricsHash: "SHA256:8f4c2e5a1b3c9d7e8f...",
-      verificationNode: "Node-VAR-449",
-      status: "Verified"
-    },
-    {
-      id: "TMS-002",
-      name: "Priya Sharma",
-      documentType: "Passport",
-      documentId: "Z84210XX",
-      circuit: "Heritage Circuit (Rajasthan Forts)",
-      itineraryDate: "2026-05-23T09:00:00Z",
-      hotelName: "Jodhpur Palace View, Jodhpur",
-      checkInDate: "2026-05-24T18:00:00Z", // 33 hours (>24h delta)
-      biometricsHash: "SHA256:d3a91f5c6b7e8d9a0f...",
-      verificationNode: "Node-JOD-582",
-      status: "Mismatch Alert"
-    },
-    {
-      id: "TMS-003",
-      name: "Amit Patel",
-      documentType: "Aadhaar",
-      documentId: "XXXX-XXXX-3419",
-      circuit: "Coastal Circuit (Kerala Backwaters)",
-      itineraryDate: "2026-05-25T14:00:00Z",
-      hotelName: "Kumarakom Lake Resort, Kerala",
-      checkInDate: "2026-05-25T15:15:00Z", // 1.25 hours (OK)
-      biometricsHash: "SHA256:ef2b5a6c7d8e9f0a1b...",
-      verificationNode: "Node-COK-881",
-      status: "Verified"
-    },
-    {
-      id: "TMS-004",
-      name: "Sunita Rao",
-      documentType: "Passport",
-      documentId: "Y99318XX",
-      circuit: "Heritage Circuit (Rajasthan Forts)",
-      itineraryDate: "2026-05-26T08:00:00Z",
-      hotelName: "Jaipur Heritage Inn, Jaipur",
-      checkInDate: "2026-05-27T15:30:00Z", // 31.5 hours (>24h delta)
-      biometricsHash: "SHA256:a1e2f4c5b6d7e8f9a0...",
-      verificationNode: "Node-JAI-104",
-      status: "Mismatch Alert"
-    }
-  ]);
-  const [expandedTouristId, setExpandedTouristId] = useState<string | null>(null);
+
 
   // --- Pre-meeting Brief States ---
   const [briefTopic, setBriefTopic] = useState<string>("");
@@ -450,13 +383,7 @@ export default function NLPDashboard() {
 
 
 
-  // --- India-Originated TMS Helpers ---
-  const calculateCheckInDelta = (checkInStr: string, itineraryStr: string) => {
-    const checkIn = new Date(checkInStr);
-    const itinerary = new Date(itineraryStr);
-    const diffMs = Math.abs(checkIn.getTime() - itinerary.getTime());
-    return diffMs / (1000 * 60 * 60); // Difference in hours
-  };
+
 
   // --- Pre-meeting Brief Helper ---
   const generatePreMeetingBrief = (topic: string) => {
@@ -613,7 +540,7 @@ export default function NLPDashboard() {
     { id: "budget", label: "Sprint Budget & Scope" },
     { id: "telemetry", label: "Telemetry & Sockets" },
     { id: "frontend", label: "React Frontend App" },
-    { id: "tms", label: "Aadhaar & Passport Audit" }
+    { id: "architecture", label: "Core System Architecture" }
   ];
 
   const getHeatIntensity = (topicId: string, meeting: MeetingData) => {
@@ -631,8 +558,8 @@ export default function NLPDashboard() {
       hasHigh = cleanContradictions.some(c => c.includes("telemetry") || c.includes("polling") || c.includes("websocket") || c.includes("auth"));
     } else if (topicId === "frontend" && (cleanTitle.includes("frontend") || cleanTitle.includes("react") || cleanKeywords.includes("react frontend"))) {
       hasHigh = cleanContradictions.some(c => c.includes("frontend") || c.includes("react") || c.includes("display"));
-    } else if (topicId === "tms" && (cleanTitle.includes("tms") || cleanTitle.includes("tourist") || cleanKeywords.includes("tms") || cleanKeywords.includes("budget"))) {
-      hasHigh = cleanContradictions.some(c => c.includes("tms") || c.includes("tourist") || c.includes("aadhaar") || c.includes("passport") || c.includes("verification"));
+    } else if (topicId === "architecture" && (cleanTitle.includes("architecture") || cleanTitle.includes("design") || cleanKeywords.includes("architecture") || cleanKeywords.includes("integration"))) {
+      hasHigh = cleanContradictions.some(c => c.includes("architecture") || c.includes("payload") || c.includes("design") || c.includes("rest") || c.includes("latency") || c.includes("websocket"));
     }
 
     if (hasHigh) return { level: "high", color: "bg-[#FF9933] shadow-[0_0_15px_rgba(255,153,51,0.85)] animate-pulse", label: "Critical Blocker / Contradiction" };
@@ -646,8 +573,8 @@ export default function NLPDashboard() {
       hasMedium = cleanUnresolved.some(u => u.includes("telemetry") || u.includes("security") || u.includes("websocket")) || cleanContradictions.some(c => c.includes("polling"));
     } else if (topicId === "frontend") {
       hasMedium = cleanUnresolved.some(u => u.includes("frontend") || u.includes("graph")) || cleanContradictions.some(c => c.includes("frontend"));
-    } else if (topicId === "tms") {
-      hasMedium = cleanUnresolved.some(u => u.includes("tms") || u.includes("aadhaar") || u.includes("api")) || cleanContradictions.some(c => c.includes("tms"));
+    } else if (topicId === "architecture") {
+      hasMedium = cleanUnresolved.some(u => u.includes("security") || u.includes("auth") || u.includes("sandbox") || u.includes("api")) || cleanContradictions.some(c => c.includes("architecture"));
     }
 
     if (hasMedium) return { level: "medium", color: "bg-[#FF9933]/60 shadow-[0_0_8px_rgba(255,153,51,0.45)]", label: "Minor Blocker / Active Contradiction" };
@@ -661,8 +588,8 @@ export default function NLPDashboard() {
       isDiscussed = cleanKeywords.includes("json bridge") || cleanKeywords.includes("swagger") || cleanKeywords.includes("telemetry") || cleanKeywords.includes("node.js middleware");
     } else if (topicId === "frontend") {
       isDiscussed = cleanKeywords.includes("react frontend") || cleanKeywords.includes("json bridge");
-    } else if (topicId === "tms") {
-      isDiscussed = cleanKeywords.includes("tms integration") || cleanKeywords.includes("budget") || cleanKeywords.includes("scope");
+    } else if (topicId === "architecture") {
+      isDiscussed = cleanKeywords.includes("architecture") || cleanKeywords.includes("integration") || cleanKeywords.includes("design") || cleanKeywords.includes("budget") || cleanKeywords.includes("scope");
     }
 
     if (isDiscussed) return { level: "discussed", color: "bg-[#000080]/90 border border-[#FF9933]/30 shadow-[0_0_10px_rgba(0,0,128,0.3)]", label: "Discussed Neutrally" };
@@ -681,12 +608,12 @@ export default function NLPDashboard() {
     if (heat.level === "high") {
       detailsText = meeting.conflicts?.contradictions.find(c => {
         const lc = c.toLowerCase();
-        return lc.includes(topic.id) || (topic.id === "tms" && (lc.includes("aadhaar") || lc.includes("passport") || lc.includes("verification")));
+        return lc.includes(topic.id) || (topic.id === "architecture" && (lc.includes("design") || lc.includes("pipeline") || lc.includes("endpoint") || lc.includes("websocket")));
       }) || meeting.conflicts?.contradictions[0] || "Critical structural conflict identified.";
     } else if (heat.level === "medium") {
       detailsText = meeting.conflicts?.unresolved.find(u => {
         const lu = u.toLowerCase();
-        return lu.includes(topic.id) || (topic.id === "tms" && (lu.includes("aadhaar") || lu.includes("passport") || lu.includes("verification")));
+        return lu.includes(topic.id) || (topic.id === "architecture" && (lu.includes("security") || lu.includes("auth") || lu.includes("sandbox") || lu.includes("api")));
       }) || meeting.conflicts?.unresolved[0] || "Active pending blocker under review.";
     }
 
@@ -1196,6 +1123,275 @@ export default function NLPDashboard() {
                 )}
               </div>
 
+
+
+              {/* --- Pre-meeting Brief & Conflict Heatmap High-Density Bento Grid --- */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                
+                {/* Pre-meeting Brief Card */}
+                <div className="p-6 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl relative overflow-hidden flex flex-col justify-start">
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-[#000080]" />
+                  
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-[#000080]/30 text-[#FF9933] rounded-lg border border-[#000080]/50">
+                        <Search size={20} />
+                      </div>
+                      <div>
+                        <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Pre_Meeting_Briefing</h2>
+                        <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Auto-pulled Sync Context & Blocker Intel</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-mono">Select/Type Agenda Topic</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            placeholder="e.g., Waterproofing, Telemetry, Budget..."
+                            value={briefTopic}
+                            onChange={(e) => {
+                              setBriefTopic(e.target.value);
+                              generatePreMeetingBrief(e.target.value);
+                            }}
+                            className="flex-1 px-3 py-2 bg-[#0A0A0C] border border-slate-800 focus:border-[#FF9933]/50 focus:outline-none rounded text-xs font-mono text-white transition-colors"
+                          />
+                          <button
+                            onClick={() => generatePreMeetingBrief(briefTopic)}
+                            className="px-3 bg-slate-900 border border-slate-800 hover:border-[#FF9933] hover:text-white rounded text-xs font-mono transition-colors uppercase font-bold"
+                          >
+                            Query
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {["Waterproofing", "Telemetry", "Budget", "Scope", "Architecture"].map((chip) => (
+                          <button
+                            key={chip}
+                            onClick={() => {
+                              setBriefTopic(chip);
+                              generatePreMeetingBrief(chip);
+                            }}
+                            className={`px-2 py-1 text-[9px] font-mono uppercase tracking-wider rounded border transition-all ${
+                              briefTopic.toLowerCase() === chip.toLowerCase()
+                                ? "bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40 shadow-[0_0_8px_rgba(255,153,51,0.2)]"
+                                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+                            }`}
+                          >
+                            {chip}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-slate-800/80 h-[240px] overflow-y-auto font-mono text-xs scrollbar-thin">
+                      {!briefResults ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center text-slate-600">
+                          <FileCheck size={28} className="mb-2 opacity-30" />
+                          <p className="italic text-[10px] uppercase tracking-wider text-slate-600">Awaiting topic input to generate neural briefing...</p>
+                        </div>
+                      ) : !briefResults.found ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
+                          <AlertTriangle size={24} className="mb-2 text-[#FF9933]/80" />
+                          <p className="font-bold text-[11px] uppercase tracking-wider text-white">No sync records found</p>
+                          <p className="text-[10px] text-slate-600 mt-1">Topic cluster "{briefResults.topic}" has not been discussed in past meetings.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 animate-in fade-in duration-300">
+                          <div>
+                            <h4 className="text-[10px] uppercase font-bold text-[#FF9933] tracking-widest flex items-center gap-1.5 mb-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#FF9933] animate-pulse"></span>
+                              Open Blockers & Conflicts
+                            </h4>
+                            {briefResults.blockers.length === 0 ? (
+                              <p className="text-slate-600 italic pl-3 text-[10px]">No active contradictions found in this cluster.</p>
+                            ) : (
+                              <ul className="space-y-2 pl-3 list-disc text-slate-300 text-[11px]">
+                                {briefResults.blockers.map((b: string, i: number) => (
+                                  <li key={i} className="leading-relaxed border-b border-slate-900 pb-1 last:border-0">{b}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="text-[10px] uppercase font-bold text-cyan-400 tracking-widest flex items-center gap-1.5 mb-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                              Prior Sync Decisions
+                            </h4>
+                            {briefResults.decisions.length === 0 ? (
+                              <p className="text-slate-600 italic pl-3 text-[10px]">No decisions indexed regarding this topic.</p>
+                            ) : (
+                              <ul className="space-y-2 pl-3 list-disc text-slate-300 text-[11px]">
+                                {briefResults.decisions.map((d: string, i: number) => (
+                                  <li key={i} className="leading-relaxed border-b border-slate-900 pb-1 last:border-0">{d}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="text-[10px] uppercase font-bold text-purple-400 tracking-widest flex items-center gap-1.5 mb-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                              Associated Attendees Intel
+                            </h4>
+                            <div className="space-y-1.5 pl-3">
+                              {Object.entries(briefResults.attendees).map(([name, stats]: [string, any]) => (
+                                <div key={name} className="flex justify-between items-center text-[10px] border-b border-slate-900 pb-1 last:border-0">
+                                  <span className="text-white font-bold">{name} <span className="text-slate-500 font-normal">({stats.role})</span></span>
+                                  <span className="text-purple-300 italic">{stats.sentiment} ({stats.meetingsDiscussed} sync)</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {briefResults && briefResults.found && (
+                    <div className="flex gap-2 mt-auto pt-4 border-t border-slate-800/60">
+                      <button
+                        onClick={() => exportPreMeetingBrief('copy')}
+                        className="flex-1 py-2 bg-slate-900 hover:bg-[#000080]/30 border border-slate-800 hover:border-[#000080]/50 text-slate-300 hover:text-white rounded font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Clipboard size={12} /> Copy Brief
+                      </button>
+                      <button
+                        onClick={() => exportPreMeetingBrief('download')}
+                        className="flex-1 py-2 bg-[#FF9933] hover:bg-[#FF9933]/90 text-black rounded font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(255,153,51,0.3)] hover:shadow-[0_0_20px_rgba(255,153,51,0.5)]"
+                      >
+                        <Download size={12} /> Download Brief
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recurring Conflict Heatmap Card */}
+                <div className="p-6 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl relative overflow-hidden flex flex-col justify-start">
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF9933]" />
+                  
+                  <div>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-[#FF9933]/10 text-[#FF9933] rounded-lg border border-[#FF9933]/20">
+                        <Flame size={20} className="animate-pulse" />
+                      </div>
+                      <div>
+                        <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Conflict_Heatmap</h2>
+                        <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Structural Org-Level Friction & Blocker Matrix</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mb-6">
+                      <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-2">
+                        <span>Topic Cluster / Meeting</span>
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#FF9933] rounded-sm"></span> High</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#FF9933]/60 rounded-sm"></span> Med</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#000080] rounded-sm"></span> Neut</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 font-mono text-[10px]">
+                        {TOPIC_CLUSTERS.map((topic, tIdx) => (
+                          <div key={topic.id} className="grid grid-cols-12 items-center gap-2">
+                            <div className="col-span-6 text-slate-400 truncate pr-2" title={topic.label}>
+                              {topic.label}
+                            </div>
+                            
+                            <div className="col-span-6 flex gap-2.5 items-center">
+                              {pastMeetings.map((meeting, mIdx) => {
+                                const heat = getHeatIntensity(topic.id, meeting);
+                                const isHovered = heatmapHoverCell?.topicIdx === tIdx && heatmapHoverCell?.meetingIdx === mIdx;
+
+                                return (
+                                  <div
+                                    key={mIdx}
+                                    onMouseEnter={() => setHeatmapHoverCell({ topicIdx: tIdx, meetingIdx: mIdx })}
+                                    onMouseLeave={() => setHeatmapHoverCell(null)}
+                                    onClick={() => setSelectedMeeting(meeting)}
+                                    className={`w-6 h-6 rounded cursor-pointer transition-all duration-200 transform hover:scale-105 flex items-center justify-center font-bold ${heat.color} ${
+                                      isHovered ? "ring-2 ring-white" : ""
+                                    }`}
+                                    title={`${meeting.title} - ${heat.label}`}
+                                  >
+                                    <span className="text-[7px] text-white/50">{mIdx + 1}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-slate-800/80 h-[130px] flex flex-col justify-between font-mono text-xs overflow-hidden">
+                      {heatmapHoverCell ? (
+                        (() => {
+                          const detail = getHeatmapCellDetail(heatmapHoverCell.topicIdx, heatmapHoverCell.meetingIdx);
+                          if (!detail) return null;
+                          return (
+                            <div className="space-y-2 animate-in fade-in duration-200">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h4 className="text-[10px] text-slate-500 uppercase tracking-widest">CELL FOCUS // M-{heatmapHoverCell.meetingIdx + 1}</h4>
+                                  <div className="text-white font-bold tracking-tight mt-0.5">{detail.topicLabel}</div>
+                                </div>
+                                <span className={`text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${
+                                  detail.level === "high" 
+                                    ? "bg-[#FF9933]/15 text-[#FF9933] border border-[#FF9933]/30" 
+                                    : detail.level === "medium"
+                                      ? "bg-[#FF9933]/10 text-[#FF9933]/80 border border-[#FF9933]/20"
+                                      : "bg-[#000080]/30 text-cyan-400 border border-[#000080]/40"
+                                }`}>
+                                  {detail.labelText}
+                                </span>
+                              </div>
+                              <p className="text-slate-300 leading-relaxed text-[11px] line-clamp-2">
+                                "{detail.details}"
+                              </p>
+                              <div className="text-[8px] text-[#FF9933] uppercase font-bold tracking-widest mt-1">
+                                Click cell to review full sync records &rarr;
+                              </div>
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full py-4 text-center text-slate-600">
+                          <Activity size={24} className="mb-1.5 opacity-30" />
+                          <p className="italic text-[10px] uppercase tracking-wider text-slate-600">Hover over matrix cells to decode historical friction details</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-4 border-t border-slate-800/60 font-mono">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Org Friction Score</span>
+                      <span className="text-xs font-bold text-[#FF9933] shadow-[0_0_10px_rgba(255,153,51,0.2)]">68 // HIGH FRICTION</span>
+                    </div>
+                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-3">
+                      <div 
+                        className="bg-gradient-to-r from-[#000080] via-[#FF9933] to-[#FF9933] h-full rounded-full shadow-[0_0_10px_rgba(255,153,51,0.5)]" 
+                        style={{ width: "68%" }}
+                      ></div>
+                    </div>
+                    <div className="text-[10px] text-slate-400 leading-snug space-y-1">
+                      <div className="flex justify-between border-b border-slate-900 pb-1">
+                        <span className="font-bold text-[#FF9933]">Hardware vs Product Mgmt</span>
+                        <span className="text-slate-500">Waterproofing (3 conflicts)</span>
+                      </div>
+                      <div className="flex justify-between pt-1">
+                        <span className="font-bold text-cyan-400">Frontend vs Backend Dev</span>
+                        <span className="text-slate-500">API Handshake (1 conflict)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
 
             </motion.div>
 
