@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
@@ -277,19 +277,53 @@ const HISTORICAL_MEETINGS: MeetingData[] = [
 export default function NLPDashboard() {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300, 500], [1, 0.5, 0]);
-  const heroY = useTransform(scrollY, [0, 500], [0, 100]);
+  const heroY = useTransform(scrollY, [0, 500], [0, -150]);
 
-  const [hasEntered, setHasEntered] = useState(false);
+  const [hasEntered, setHasEntered] = useState<boolean>(false);
+  const isScrollingRef = useRef<boolean>(false);
+
+  const scrollToDashboard = () => {
+    isScrollingRef.current = true;
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: 'smooth'
+    });
+    
+    setTimeout(() => {
+      const htmlEl = document.documentElement;
+      const prevScrollBehavior = htmlEl.style.scrollBehavior;
+      htmlEl.style.scrollBehavior = 'auto';
+      
+      setHasEntered(true);
+      window.scrollTo(0, 0);
+      
+      setTimeout(() => {
+        htmlEl.style.scrollBehavior = prevScrollBehavior;
+        isScrollingRef.current = false;
+      }, 50);
+    }, 800);
+  };
 
   useEffect(() => {
-    const unsubscribe = scrollY.on("change", (latest) => {
-      if (latest > 300 && !hasEntered) {
+    if (hasEntered) return;
+    const handleScroll = () => {
+      if (isScrollingRef.current) return;
+      if (window.scrollY >= window.innerHeight - 10) {
+        const htmlEl = document.documentElement;
+        const prevScrollBehavior = htmlEl.style.scrollBehavior;
+        htmlEl.style.scrollBehavior = 'auto';
+        
         setHasEntered(true);
         window.scrollTo(0, 0);
+        
+        setTimeout(() => {
+          htmlEl.style.scrollBehavior = prevScrollBehavior;
+        }, 50);
       }
-    });
-    return () => unsubscribe();
-  }, [scrollY, hasEntered]);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasEntered]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -316,6 +350,7 @@ export default function NLPDashboard() {
     { sender: 'kage', text: "Hello! I am Kage, your Lead Project Architect and Meeting Intelligence Analyst. Ask me anything about the active meeting, draft follow-up emails, or analyze technical conflicts!" }
   ]);
   const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const [sidebarTab, setSidebarTab] = useState<'chat' | 'briefing'>('chat');
 
 
 
@@ -562,7 +597,7 @@ export default function NLPDashboard() {
       hasHigh = cleanContradictions.some(c => c.includes("architecture") || c.includes("payload") || c.includes("design") || c.includes("rest") || c.includes("latency") || c.includes("websocket"));
     }
 
-    if (hasHigh) return { level: "high", color: "bg-[#FF9933] shadow-[0_0_15px_rgba(255,153,51,0.85)] animate-pulse", label: "Critical Blocker / Contradiction" };
+    if (hasHigh) return { level: "high", color: "bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.85)] animate-pulse", label: "Critical Blocker / Contradiction" };
 
     let hasMedium = false;
     if (topicId === "waterproofing") {
@@ -577,7 +612,7 @@ export default function NLPDashboard() {
       hasMedium = cleanUnresolved.some(u => u.includes("security") || u.includes("auth") || u.includes("sandbox") || u.includes("api")) || cleanContradictions.some(c => c.includes("architecture"));
     }
 
-    if (hasMedium) return { level: "medium", color: "bg-[#FF9933]/60 shadow-[0_0_8px_rgba(255,153,51,0.45)]", label: "Minor Blocker / Active Contradiction" };
+    if (hasMedium) return { level: "medium", color: "bg-purple-500/70 shadow-[0_0_8px_rgba(168,85,247,0.45)]", label: "Minor Blocker / Active Contradiction" };
 
     let isDiscussed = false;
     if (topicId === "waterproofing") {
@@ -592,7 +627,7 @@ export default function NLPDashboard() {
       isDiscussed = cleanKeywords.includes("architecture") || cleanKeywords.includes("integration") || cleanKeywords.includes("design") || cleanKeywords.includes("budget") || cleanKeywords.includes("scope");
     }
 
-    if (isDiscussed) return { level: "discussed", color: "bg-[#000080]/90 border border-[#FF9933]/30 shadow-[0_0_10px_rgba(0,0,128,0.3)]", label: "Discussed Neutrally" };
+    if (isDiscussed) return { level: "discussed", color: "bg-indigo-600/90 border border-indigo-400/30 shadow-[0_0_10px_rgba(99,102,241,0.3)]", label: "Discussed Neutrally" };
 
     return { level: "none", color: "bg-slate-800/20 border border-slate-700/20", label: "Not Discussed" };
   };
@@ -775,7 +810,10 @@ export default function NLPDashboard() {
   useEffect(() => {
     const chatContainer = document.getElementById("chat-container");
     if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+      chatContainer.scrollTo({
+        top: chatContainer.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [chatHistory, chatLoading]);
 
@@ -905,7 +943,7 @@ export default function NLPDashboard() {
         key={`${type}-${index}`} 
         className="hud-glass bg-[#131316]/50 hover:bg-[#1a1a24]/60 border border-white/10 p-8 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] relative overflow-hidden transition-all duration-300 hover:border-red-500/30 group"
       >
-        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#FF9933] to-[#000080] shadow-[0_0_15px_rgba(255,153,51,0.3)]"></div>
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-purple-500 to-indigo-600 shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
         
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-[10px] font-mono text-red-400 uppercase tracking-widest flex items-center gap-2">
@@ -922,8 +960,8 @@ export default function NLPDashboard() {
         <p className="text-lg text-white font-mono leading-relaxed mb-6 whitespace-pre-line">{details}</p>
         
         {suggestion && (
-          <div className="bg-[#000080]/15 border-l-2 border-[#FF9933] p-4 rounded-r-lg font-mono text-sm text-slate-300 shadow-[0_4px_15px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-left-4 duration-300">
-            <span className="text-[#FF9933] font-bold flex items-center gap-1.5 mb-1.5 text-[10px] uppercase tracking-wider">
+          <div className="bg-purple-950/20 border-l-2 border-purple-500 p-4 rounded-r-lg font-mono text-sm text-slate-300 shadow-[0_4px_15px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-left-4 duration-300">
+            <span className="text-purple-400 font-bold flex items-center gap-1.5 mb-1.5 text-[10px] uppercase tracking-wider">
               💡 AI Suggestion
             </span>
             <p className="leading-relaxed text-slate-300 text-xs md:text-sm whitespace-pre-line">{suggestion}</p>
@@ -961,16 +999,17 @@ export default function NLPDashboard() {
           </motion.div>
 
           {/* Scroll Indicator */}
-          <motion.div
+          <motion.button
+            onClick={scrollToDashboard}
             animate={{ y: [0, 15, 0], opacity: [0.5, 1, 0.5] }}
             transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-            className="absolute bottom-12 left-1/2 -translate-x-1/2 text-slate-500"
+            className="absolute bottom-12 left-1/2 -translate-x-1/2 text-slate-500 cursor-pointer hover:text-purple-400 focus:outline-none transition-colors group z-20"
           >
             <div className="flex flex-col items-center">
-              <span className="text-[10px] uppercase tracking-[0.3em] font-mono mb-4">Scroll to Initialize</span>
-              <div className="w-px h-16 bg-gradient-to-b from-purple-500/50 to-transparent"></div>
+              <span className="text-[10px] uppercase tracking-[0.3em] font-mono mb-4 transition-colors duration-300">Scroll to Initialize</span>
+              <div className="w-px h-16 bg-gradient-to-b from-purple-500/50 to-transparent group-hover:from-purple-400 transition-colors duration-300"></div>
             </div>
-          </motion.div>
+          </motion.button>
         </motion.div>
       )}
 
@@ -1125,157 +1164,16 @@ export default function NLPDashboard() {
 
 
 
-              {/* --- Pre-meeting Brief & Conflict Heatmap High-Density Bento Grid --- */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+              {/* --- Conflict Heatmap High-Density Bento Grid --- */}
+              <div className="mt-8">
                 
-                {/* Pre-meeting Brief Card */}
-                <div className="p-6 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl relative overflow-hidden flex flex-col justify-start">
-                  <div className="absolute top-0 left-0 w-full h-[3px] bg-[#000080]" />
-                  
-                  <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 bg-[#000080]/30 text-[#FF9933] rounded-lg border border-[#000080]/50">
-                        <Search size={20} />
-                      </div>
-                      <div>
-                        <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Pre_Meeting_Briefing</h2>
-                        <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Auto-pulled Sync Context & Blocker Intel</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 mb-6">
-                      <div>
-                        <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-mono">Select/Type Agenda Topic</label>
-                        <div className="flex gap-2">
-                          <input 
-                            type="text"
-                            placeholder="e.g., Waterproofing, Telemetry, Budget..."
-                            value={briefTopic}
-                            onChange={(e) => {
-                              setBriefTopic(e.target.value);
-                              generatePreMeetingBrief(e.target.value);
-                            }}
-                            className="flex-1 px-3 py-2 bg-[#0A0A0C] border border-slate-800 focus:border-[#FF9933]/50 focus:outline-none rounded text-xs font-mono text-white transition-colors"
-                          />
-                          <button
-                            onClick={() => generatePreMeetingBrief(briefTopic)}
-                            className="px-3 bg-slate-900 border border-slate-800 hover:border-[#FF9933] hover:text-white rounded text-xs font-mono transition-colors uppercase font-bold"
-                          >
-                            Query
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {["Waterproofing", "Telemetry", "Budget", "Scope", "Architecture"].map((chip) => (
-                          <button
-                            key={chip}
-                            onClick={() => {
-                              setBriefTopic(chip);
-                              generatePreMeetingBrief(chip);
-                            }}
-                            className={`px-2 py-1 text-[9px] font-mono uppercase tracking-wider rounded border transition-all ${
-                              briefTopic.toLowerCase() === chip.toLowerCase()
-                                ? "bg-[#FF9933]/15 text-[#FF9933] border-[#FF9933]/40 shadow-[0_0_8px_rgba(255,153,51,0.2)]"
-                                : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
-                            }`}
-                          >
-                            {chip}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-slate-800/80 h-[240px] overflow-y-auto font-mono text-xs scrollbar-thin">
-                      {!briefResults ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-slate-600">
-                          <FileCheck size={28} className="mb-2 opacity-30" />
-                          <p className="italic text-[10px] uppercase tracking-wider text-slate-600">Awaiting topic input to generate neural briefing...</p>
-                        </div>
-                      ) : !briefResults.found ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
-                          <AlertTriangle size={24} className="mb-2 text-[#FF9933]/80" />
-                          <p className="font-bold text-[11px] uppercase tracking-wider text-white">No sync records found</p>
-                          <p className="text-[10px] text-slate-600 mt-1">Topic cluster "{briefResults.topic}" has not been discussed in past meetings.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-4 animate-in fade-in duration-300">
-                          <div>
-                            <h4 className="text-[10px] uppercase font-bold text-[#FF9933] tracking-widest flex items-center gap-1.5 mb-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#FF9933] animate-pulse"></span>
-                              Open Blockers & Conflicts
-                            </h4>
-                            {briefResults.blockers.length === 0 ? (
-                              <p className="text-slate-600 italic pl-3 text-[10px]">No active contradictions found in this cluster.</p>
-                            ) : (
-                              <ul className="space-y-2 pl-3 list-disc text-slate-300 text-[11px]">
-                                {briefResults.blockers.map((b: string, i: number) => (
-                                  <li key={i} className="leading-relaxed border-b border-slate-900 pb-1 last:border-0">{b}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-
-                          <div>
-                            <h4 className="text-[10px] uppercase font-bold text-cyan-400 tracking-widest flex items-center gap-1.5 mb-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                              Prior Sync Decisions
-                            </h4>
-                            {briefResults.decisions.length === 0 ? (
-                              <p className="text-slate-600 italic pl-3 text-[10px]">No decisions indexed regarding this topic.</p>
-                            ) : (
-                              <ul className="space-y-2 pl-3 list-disc text-slate-300 text-[11px]">
-                                {briefResults.decisions.map((d: string, i: number) => (
-                                  <li key={i} className="leading-relaxed border-b border-slate-900 pb-1 last:border-0">{d}</li>
-                                ))}
-                              </ul>
-                            )}
-                          </div>
-
-                          <div>
-                            <h4 className="text-[10px] uppercase font-bold text-purple-400 tracking-widest flex items-center gap-1.5 mb-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-                              Associated Attendees Intel
-                            </h4>
-                            <div className="space-y-1.5 pl-3">
-                              {Object.entries(briefResults.attendees).map(([name, stats]: [string, any]) => (
-                                <div key={name} className="flex justify-between items-center text-[10px] border-b border-slate-900 pb-1 last:border-0">
-                                  <span className="text-white font-bold">{name} <span className="text-slate-500 font-normal">({stats.role})</span></span>
-                                  <span className="text-purple-300 italic">{stats.sentiment} ({stats.meetingsDiscussed} sync)</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {briefResults && briefResults.found && (
-                    <div className="flex gap-2 mt-auto pt-4 border-t border-slate-800/60">
-                      <button
-                        onClick={() => exportPreMeetingBrief('copy')}
-                        className="flex-1 py-2 bg-slate-900 hover:bg-[#000080]/30 border border-slate-800 hover:border-[#000080]/50 text-slate-300 hover:text-white rounded font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <Clipboard size={12} /> Copy Brief
-                      </button>
-                      <button
-                        onClick={() => exportPreMeetingBrief('download')}
-                        className="flex-1 py-2 bg-[#FF9933] hover:bg-[#FF9933]/90 text-black rounded font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(255,153,51,0.3)] hover:shadow-[0_0_20px_rgba(255,153,51,0.5)]"
-                      >
-                        <Download size={12} /> Download Brief
-                      </button>
-                    </div>
-                  )}
-                </div>
-
                 {/* Recurring Conflict Heatmap Card */}
                 <div className="p-6 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl relative overflow-hidden flex flex-col justify-start">
-                  <div className="absolute top-0 left-0 w-full h-[3px] bg-[#FF9933]" />
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-purple-500 to-indigo-500" />
                   
                   <div>
                     <div className="flex items-center gap-3 mb-6">
-                      <div className="p-2 bg-[#FF9933]/10 text-[#FF9933] rounded-lg border border-[#FF9933]/20">
+                      <div className="p-2 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/30">
                         <Flame size={20} className="animate-pulse" />
                       </div>
                       <div>
@@ -1285,23 +1183,23 @@ export default function NLPDashboard() {
                     </div>
 
                     <div className="space-y-4 mb-6">
-                      <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-2">
-                        <span>Topic Cluster / Meeting</span>
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#FF9933] rounded-sm"></span> High</span>
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#FF9933]/60 rounded-sm"></span> Med</span>
-                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-[#000080] rounded-sm"></span> Neut</span>
+                      <div className="grid grid-cols-12 items-center text-[9px] font-mono text-slate-500 uppercase tracking-wider border-b border-slate-800 pb-2 mb-2">
+                        <span className="col-span-4">Topic Cluster / Meeting</span>
+                        <div className="col-span-8 flex items-center justify-end gap-3">
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-rose-500 rounded-sm"></span> High</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-purple-500/70 rounded-sm"></span> Med</span>
+                          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-indigo-600/90 rounded-sm"></span> Neut</span>
                         </div>
                       </div>
 
                       <div className="space-y-3 font-mono text-[10px]">
                         {TOPIC_CLUSTERS.map((topic, tIdx) => (
-                          <div key={topic.id} className="grid grid-cols-12 items-center gap-2">
-                            <div className="col-span-6 text-slate-400 truncate pr-2" title={topic.label}>
+                          <div key={topic.id} className="grid grid-cols-12 items-center gap-4">
+                            <div className="col-span-4 text-slate-400 truncate pr-4 text-xs font-semibold" title={topic.label}>
                               {topic.label}
                             </div>
                             
-                            <div className="col-span-6 flex gap-2.5 items-center">
+                            <div className="col-span-8 flex gap-3.5 items-center">
                               {pastMeetings.map((meeting, mIdx) => {
                                 const heat = getHeatIntensity(topic.id, meeting);
                                 const isHovered = heatmapHoverCell?.topicIdx === tIdx && heatmapHoverCell?.meetingIdx === mIdx;
@@ -1341,10 +1239,10 @@ export default function NLPDashboard() {
                                 </div>
                                 <span className={`text-[8px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${
                                   detail.level === "high" 
-                                    ? "bg-[#FF9933]/15 text-[#FF9933] border border-[#FF9933]/30" 
+                                    ? "bg-rose-500/15 text-rose-400 border border-rose-500/30" 
                                     : detail.level === "medium"
-                                      ? "bg-[#FF9933]/10 text-[#FF9933]/80 border border-[#FF9933]/20"
-                                      : "bg-[#000080]/30 text-cyan-400 border border-[#000080]/40"
+                                      ? "bg-purple-500/15 text-purple-400 border border-purple-500/30"
+                                      : "bg-indigo-600/20 text-cyan-400 border border-indigo-500/30"
                                 }`}>
                                   {detail.labelText}
                                 </span>
@@ -1352,7 +1250,7 @@ export default function NLPDashboard() {
                               <p className="text-slate-300 leading-relaxed text-[11px] line-clamp-2">
                                 "{detail.details}"
                               </p>
-                              <div className="text-[8px] text-[#FF9933] uppercase font-bold tracking-widest mt-1">
+                              <div className="text-[8px] text-purple-400 uppercase font-bold tracking-widest mt-1">
                                 Click cell to review full sync records &rarr;
                               </div>
                             </div>
@@ -1370,17 +1268,17 @@ export default function NLPDashboard() {
                   <div className="mt-auto pt-4 border-t border-slate-800/60 font-mono">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Org Friction Score</span>
-                      <span className="text-xs font-bold text-[#FF9933] shadow-[0_0_10px_rgba(255,153,51,0.2)]">68 // HIGH FRICTION</span>
+                      <span className="text-xs font-bold text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]">68 // HIGH FRICTION</span>
                     </div>
                     <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-3">
                       <div 
-                        className="bg-gradient-to-r from-[#000080] via-[#FF9933] to-[#FF9933] h-full rounded-full shadow-[0_0_10px_rgba(255,153,51,0.5)]" 
+                        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]" 
                         style={{ width: "68%" }}
                       ></div>
                     </div>
                     <div className="text-[10px] text-slate-400 leading-snug space-y-1">
                       <div className="flex justify-between border-b border-slate-900 pb-1">
-                        <span className="font-bold text-[#FF9933]">Hardware vs Product Mgmt</span>
+                        <span className="font-bold text-rose-400">Hardware vs Product Mgmt</span>
                         <span className="text-slate-500">Waterproofing (3 conflicts)</span>
                       </div>
                       <div className="flex justify-between pt-1">
@@ -1492,9 +1390,9 @@ export default function NLPDashboard() {
       <div className="fixed bottom-6 right-6 z-40 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-500">
         <button 
           onClick={() => setIsChatOpen(true)}
-          className="flex items-center gap-3 bg-[#131316]/90 backdrop-blur-xl px-5 py-3 rounded-full border border-purple-500/30 shadow-[0_0_20px_rgba(128,90,213,0.15)] hover:border-[#000080]/60 hover:shadow-[0_0_30px_rgba(0,0,128,0.25)] transition-all group"
+          className="flex items-center gap-3 bg-[#131316]/90 backdrop-blur-xl px-5 py-3 rounded-full border border-purple-500/30 shadow-[0_0_20px_rgba(128,90,213,0.15)] hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)] transition-all group"
         >
-          <Terminal size={16} className="text-[#FF9933] group-hover:text-[#FFaa55]" />
+          <Terminal size={16} className="text-purple-400 group-hover:text-purple-300" />
           <span className="text-xs font-bold text-slate-300 group-hover:text-white tracking-wide">Ask Kage</span>
           <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse ml-1"></div>
         </button>
@@ -1509,7 +1407,7 @@ export default function NLPDashboard() {
         {/* Header */}
         <div className="p-6 border-b border-slate-800 bg-[#131316] flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#000080]/30 text-[#FF9933] rounded border border-[#000080]/50">
+            <div className="p-2 bg-purple-500/20 text-purple-400 rounded border border-purple-500/30">
               <Terminal size={16} />
             </div>
             <div>
@@ -1530,117 +1428,280 @@ export default function NLPDashboard() {
           </button>
         </div>
 
-        {/* Scrollable Chat Area */}
-        <div 
-          id="chat-container"
-          className="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-slate-800 animate-in fade-in"
-        >
-          {chatHistory.map((msg, i) => (
-            <div 
-              key={i} 
-              className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div 
-                className={`max-w-[85%] rounded-xl p-4 font-mono text-xs leading-relaxed ${
-                  msg.sender === 'user'
-                    ? 'bg-[#000080]/20 text-slate-200 border border-[#000080]/40 rounded-br-none'
-                    : 'bg-[#131316] text-slate-300 border border-slate-800 rounded-bl-none shadow-md'
-                }`}
-              >
-                {msg.sender === 'kage' ? (
-                  // Simple Safe Markdown Rendering for Bold, lists, code
-                  <div className="space-y-2 whitespace-pre-wrap">
-                    {msg.text.split('\n').map((line, idx) => {
-                      // Check for bold matches
-                      const boldRegex = /\*\*(.*?)\*\*/g;
-                      const parts = [];
-                      let lastIndex = 0;
-                      let match;
-                      while ((match = boldRegex.exec(line)) !== null) {
-                        if (match.index > lastIndex) {
-                          parts.push(line.substring(lastIndex, match.index));
-                        }
-                        parts.push(<strong key={match.index} className="text-white font-bold">{match[1]}</strong>);
-                        lastIndex = boldRegex.lastIndex;
-                      }
-                      if (lastIndex < line.length) {
-                        parts.push(line.substring(lastIndex));
-                      }
-                      
-                      const element = parts.length > 0 ? parts : line;
-                      
-                      if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
-                        return (
-                          <div key={idx} className="flex gap-2 pl-2">
-                            <span className="text-[#FF9933]">•</span>
-                            <span>{element}</span>
-                          </div>
-                        );
-                      }
-                      return <p key={idx}>{element}</p>;
-                    })}
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-wrap">{msg.text}</p>
-                )}
-              </div>
-            </div>
-          ))}
+        {/* Double-tab selectors */}
+        <div className="flex border-b border-slate-800 bg-[#0E0E11] shrink-0">
+          <button 
+            onClick={() => setSidebarTab('chat')}
+            className={`flex-1 py-3 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              sidebarTab === 'chat' 
+                ? 'border-purple-500 text-white bg-purple-500/5' 
+                : 'border-transparent text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            Kage Chat
+          </button>
+          <button 
+            onClick={() => setSidebarTab('briefing')}
+            className={`flex-1 py-3 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors border-b-2 ${
+              sidebarTab === 'briefing' 
+                ? 'border-purple-500 text-white bg-purple-500/5' 
+                : 'border-transparent text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            Neural Briefing
+          </button>
+        </div>
 
-          {chatLoading && (
-            <div className="flex justify-start">
-              <div className="bg-[#131316] border border-slate-800 rounded-xl rounded-bl-none p-4 max-w-[85%]">
-                <div className="flex items-center gap-1.5 h-3">
-                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-100"></div>
-                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-200"></div>
-                  <div className="w-1.5 h-1.5 bg-[#FF9933] rounded-full animate-bounce delay-300"></div>
+        {sidebarTab === 'chat' ? (
+          <>
+            {/* Scrollable Chat Area */}
+            <div 
+              id="chat-container"
+              className="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-slate-800 animate-in fade-in"
+            >
+              {chatHistory.map((msg, i) => (
+                <div 
+                  key={i} 
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div 
+                    className={`max-w-[85%] rounded-xl p-4 font-mono text-xs leading-relaxed ${
+                      msg.sender === 'user'
+                        ? 'bg-purple-500/10 text-slate-200 border border-purple-500/30 rounded-br-none'
+                        : 'bg-[#131316] text-slate-300 border border-slate-800 rounded-bl-none shadow-md'
+                    }`}
+                  >
+                    {msg.sender === 'kage' ? (
+                      // Simple Safe Markdown Rendering for Bold, lists, code
+                      <div className="space-y-2 whitespace-pre-wrap">
+                        {msg.text.split('\n').map((line, idx) => {
+                          // Check for bold matches
+                          const boldRegex = /\*\*(.*?)\*\*/g;
+                          const parts = [];
+                          let lastIndex = 0;
+                          let match;
+                          while ((match = boldRegex.exec(line)) !== null) {
+                            if (match.index > lastIndex) {
+                              parts.push(line.substring(lastIndex, match.index));
+                            }
+                            parts.push(<strong key={match.index} className="text-white font-bold">{match[1]}</strong>);
+                            lastIndex = boldRegex.lastIndex;
+                          }
+                          if (lastIndex < line.length) {
+                            parts.push(line.substring(lastIndex));
+                          }
+                          
+                          const element = parts.length > 0 ? parts : line;
+                          
+                          if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
+                            return (
+                              <div key={idx} className="flex gap-2 pl-2">
+                                <span className="text-purple-400">•</span>
+                                <span>{element}</span>
+                              </div>
+                            );
+                          }
+                          return <p key={idx}>{element}</p>;
+                        })}
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-[#131316] border border-slate-800 rounded-xl rounded-bl-none p-4 max-w-[85%]">
+                    <div className="flex items-center gap-1.5 h-3">
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-100"></div>
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-200"></div>
+                      <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-bounce delay-300"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Suggestion Chips */}
+            <div className="px-6 py-3 border-t border-slate-800/50 bg-[#0A0A0C] flex flex-wrap gap-2 shrink-0">
+              <button 
+                onClick={() => handleSendMessage("What were the key blockers or technical conflicts discussed?")}
+                className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+              >
+                Blockers Audit
+              </button>
+              <button 
+                onClick={() => handleSendMessage("Draft a concise professional follow-up email for the action items.")}
+                className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+              >
+                Draft Action Email
+              </button>
+              <button 
+                onClick={() => handleSendMessage("Summarize the roles, participation rate, and overall sentiment of the members.")}
+                className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
+              >
+                Speaker Roles & Sentiment
+              </button>
+            </div>
+
+            {/* Input area */}
+            <div className="p-6 border-t border-slate-800 bg-[#131316] flex gap-3 shrink-0">
+              <input 
+                type="text" 
+                placeholder="Ask Kage..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSendMessage();
+                }}
+                className="flex-1 px-4 py-2.5 bg-[#0A0A0C] border border-slate-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-purple-500/50"
+              />
+              <button 
+                onClick={() => handleSendMessage()}
+                className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors"
+              >
+                Send
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Neural Briefing Area */}
+            <div className="p-6 border-b border-slate-800/50 bg-[#0A0A0C] space-y-4 shrink-0">
+              <div>
+                <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-mono">Select/Type Agenda Topic</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    placeholder="e.g., Waterproofing, Telemetry, Budget..."
+                    value={briefTopic}
+                    onChange={(e) => {
+                      setBriefTopic(e.target.value);
+                      generatePreMeetingBrief(e.target.value);
+                    }}
+                    className="flex-1 px-3 py-2 bg-[#0A0A0C] border border-slate-800 focus:border-purple-500/50 focus:outline-none rounded text-xs font-mono text-white transition-colors"
+                  />
+                  <button
+                    onClick={() => generatePreMeetingBrief(briefTopic)}
+                    className="px-3 bg-slate-900 border border-slate-800 hover:border-purple-500 hover:text-white rounded text-xs font-mono transition-colors uppercase font-bold"
+                  >
+                    Query
+                  </button>
                 </div>
               </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {["Waterproofing", "Telemetry", "Budget", "Scope", "Architecture"].map((chip) => (
+                  <button
+                    key={chip}
+                    onClick={() => {
+                      setBriefTopic(chip);
+                      generatePreMeetingBrief(chip);
+                    }}
+                    className={`px-2 py-1 text-[9px] font-mono uppercase tracking-wider rounded border transition-all ${
+                      briefTopic.toLowerCase() === chip.toLowerCase()
+                        ? "bg-purple-500/15 text-purple-400 border-purple-500/40 shadow-[0_0_8px_rgba(168,85,247,0.2)]"
+                        : "bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-white"
+                    }`}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="px-6 py-3 border-t border-slate-800/50 bg-[#0A0A0C] flex flex-wrap gap-2 shrink-0">
-          <button 
-            onClick={() => handleSendMessage("What were the key blockers or technical conflicts discussed?")}
-            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
-          >
-            Blockers Audit
-          </button>
-          <button 
-            onClick={() => handleSendMessage("Draft a concise professional follow-up email for the action items.")}
-            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
-          >
-            Draft Action Email
-          </button>
-          <button 
-            onClick={() => handleSendMessage("Summarize the roles, participation rate, and overall sentiment of the members.")}
-            className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
-          >
-            Speaker Roles & Sentiment
-          </button>
-        </div>
+            {/* Scrollable Results Viewport */}
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 scrollbar-thin scrollbar-thumb-slate-800 font-mono text-xs bg-[#070709]/30">
+              {!briefResults ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-600">
+                  <FileCheck size={28} className="mb-2 opacity-30" />
+                  <p className="italic text-[10px] uppercase tracking-wider text-slate-600">Awaiting topic input to generate neural briefing...</p>
+                </div>
+              ) : !briefResults.found ? (
+                <div className="flex flex-col items-center justify-center h-full text-center text-slate-500">
+                  <AlertTriangle size={24} className="mb-2 text-purple-400/80" />
+                  <p className="font-bold text-[11px] uppercase tracking-wider text-white">No sync records found</p>
+                  <p className="text-[10px] text-slate-600 mt-1">Topic cluster "{briefResults.topic}" has not been discussed in past meetings.</p>
+                </div>
+              ) : (
+                <div className="space-y-6 animate-in fade-in duration-300">
+                  <div>
+                    <h4 className="text-[10px] uppercase font-bold text-purple-400 tracking-widest flex items-center gap-1.5 mb-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>
+                      Open Blockers & Conflicts
+                    </h4>
+                    {briefResults.blockers.length === 0 ? (
+                      <p className="text-slate-600 italic pl-3 text-[10px]">No active contradictions found in this cluster.</p>
+                    ) : (
+                      <ul className="space-y-2.5 pl-3 list-disc text-slate-300 text-[11px]">
+                        {briefResults.blockers.map((b: string, i: number) => (
+                          <li key={i} className="leading-relaxed border-b border-slate-900 pb-1.5 last:border-0">{b}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
-        {/* Input area */}
-        <div className="p-6 border-t border-slate-800 bg-[#131316] flex gap-3 shrink-0">
-          <input 
-            type="text" 
-            placeholder="Ask Kage..."
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSendMessage();
-            }}
-            className="flex-1 px-4 py-2.5 bg-[#0A0A0C] border border-slate-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-[#000080]/50"
-          />
-          <button 
-            onClick={() => handleSendMessage()}
-            className="px-4 py-2.5 bg-[#000080] hover:bg-[#000099] text-white rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-colors"
-          >
-            Send
-          </button>
-        </div>
+                  <div>
+                    <h4 className="text-[10px] uppercase font-bold text-cyan-400 tracking-widest flex items-center gap-1.5 mb-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                      Prior Sync Decisions
+                    </h4>
+                    {briefResults.decisions.length === 0 ? (
+                      <p className="text-slate-600 italic pl-3 text-[10px]">No decisions indexed regarding this topic.</p>
+                    ) : (
+                      <ul className="space-y-2.5 pl-3 list-disc text-slate-300 text-[11px]">
+                        {briefResults.decisions.map((d: string, i: number) => (
+                          <li key={i} className="leading-relaxed border-b border-slate-900 pb-1.5 last:border-0">{d}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 className="text-[10px] uppercase font-bold text-purple-400 tracking-widest flex items-center gap-1.5 mb-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                      Associated Attendees Intel
+                    </h4>
+                    <div className="space-y-2 pl-3">
+                      {Object.entries(briefResults.attendees).map(([name, stats]: [string, any]) => (
+                        <div key={name} className="flex justify-between items-center text-[10px] border-b border-slate-900 pb-1.5 last:border-0">
+                          <span className="text-white font-bold">{name} <span className="text-slate-500 font-normal">({stats.role})</span></span>
+                          <span className="text-purple-300 italic">{stats.sentiment} ({stats.meetingsDiscussed} sync)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Action Area */}
+            <div className="p-6 border-t border-slate-800 bg-[#131316] shrink-0">
+              {briefResults && briefResults.found ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => exportPreMeetingBrief('copy')}
+                    className="flex-1 py-2.5 bg-[#131316] hover:bg-purple-500/10 border border-slate-800 hover:border-purple-500/40 text-slate-300 hover:text-white rounded-lg font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Clipboard size={12} /> Copy Brief
+                  </button>
+                  <button
+                    onClick={() => exportPreMeetingBrief('download')}
+                    className="flex-1 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-mono text-[10px] uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]"
+                  >
+                    <Download size={12} /> Download Brief
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-2.5 text-[10px] text-slate-600 uppercase font-mono tracking-widest italic">
+                  Enter agenda topic above to enable action utilities
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Expanded Meeting Modal */}
@@ -1680,7 +1741,7 @@ export default function NLPDashboard() {
                     onClick={() => setActiveTab(tab.id as any)}
                     onKeyDown={(e) => handleTabKeyDown(e, idx)}
                     className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] ${activeTab === tab.id
-                        ? 'border-[#FF9933] text-white drop-shadow-[0_0_8px_rgba(255,153,51,0.5)]'
+                        ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
                         : 'border-transparent text-slate-600 hover:text-slate-300'
                       }`}
                   >
@@ -1747,19 +1808,19 @@ export default function NLPDashboard() {
                                   : 'border border-transparent'
                               } ${
                                 isHighlighted 
-                                  ? 'bg-white shadow-[0_10px_30px_rgba(0,0,128,0.08)] border-l-4 border-l-[#FF9933]' 
+                                  ? 'bg-white shadow-[0_10px_30px_rgba(168,85,247,0.08)] border-l-4 border-l-purple-500' 
                                   : 'border border-transparent'
                               }`}
                             >
                               {isHighlighted && (
-                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-gradient-to-b from-[#FF9933] to-[#000080]" />
+                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-gradient-to-b from-purple-500 to-indigo-600" />
                               )}
                               <div className="flex justify-between items-center z-10">
                                 <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">
                                   {sum.speaker}
                                 </span>
                                 {isHighlighted && (
-                                  <span className="text-[9px] font-mono font-bold text-[#FF9933] uppercase tracking-wider">
+                                  <span className="text-[9px] font-mono font-bold text-purple-500 uppercase tracking-wider">
                                     [Highlighted]
                                   </span>
                                 )}
@@ -1786,11 +1847,11 @@ export default function NLPDashboard() {
                         }}
                         className={`px-4 py-2 rounded-md text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 ${
                           highlightMode 
-                            ? 'bg-[#FF9933] text-black shadow-[0_0_15px_rgba(255,153,51,0.4)]' 
-                            : 'bg-[#0A0A0C] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
+                            ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
+                            : 'bg-[#0A0A0C] text-purple-400 border border-purple-500/30 hover:border-purple-500/60'
                         }`}
                       >
-                        <span className={`w-2 h-2 rounded-full ${highlightMode ? 'bg-black animate-pulse' : 'bg-[#FF9933]'}`}></span>
+                        <span className={`w-2 h-2 rounded-full ${highlightMode ? 'bg-black animate-pulse' : 'bg-purple-500'}`}></span>
                         {highlightMode ? 'Disable Highlight' : 'Highlight Mode'}
                       </button>
                       {highlightMode && highlightedSentences.size > 0 && (
@@ -1802,7 +1863,7 @@ export default function NLPDashboard() {
 
                     <div className="flex items-center gap-2">
                       <div className="relative group">
-                        <button className="px-4 py-2 bg-[#000080] hover:bg-[#000099] text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
+                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
                           <Upload size={12} className="rotate-180" /> Export Options
                         </button>
                         
@@ -1838,19 +1899,19 @@ export default function NLPDashboard() {
                               <div className="border-t border-slate-800 my-1"></div>
                               <button 
                                 onClick={() => handleExport('md', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
                               >
                                 Export Highlights Only (.md)
                               </button>
                               <button 
                                 onClick={() => handleExport('json', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
                               >
                                 Export Highlights Only (.json)
                               </button>
                               <button 
                                 onClick={() => handleExport('copy', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
                               >
                                 Copy Highlights Only
                               </button>
