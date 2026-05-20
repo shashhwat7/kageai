@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2 } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -115,6 +115,16 @@ const getShadowSuggestion = (meeting: MeetingData | null) => {
 
 const ShadowSuggestion = ({ meeting }: { meeting: MeetingData | null }) => {
   const suggestion = getShadowSuggestion(meeting);
+
+  const handleAction = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (suggestion.action?.startsWith("Email")) {
+      const subject = encodeURIComponent(`Kage Intelligence: Tactical Followup`);
+      const body = encodeURIComponent(`Hi,\n\nI'm following up on a pending tactical blocker identified by Kage:\n\n"${suggestion.task}"\n\nLet's discuss the status.\n\nSent from Kage Dashboard.`);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}
@@ -131,7 +141,10 @@ const ShadowSuggestion = ({ meeting }: { meeting: MeetingData | null }) => {
           <p className="text-xs font-bold text-white tracking-tight leading-snug">{suggestion.task}</p>
         </div>
         {suggestion.action && (
-          <button className="px-3 py-1.5 bg-white text-black text-[10px] font-bold uppercase tracking-wider rounded-sm hover:bg-purple-400 transition-colors">
+          <button 
+            onClick={handleAction}
+            className="px-3 py-1.5 bg-white text-black text-[10px] font-bold uppercase tracking-wider rounded-sm hover:bg-purple-400 transition-colors"
+          >
             {suggestion.action}
           </button>
         )}
@@ -318,6 +331,59 @@ export default function NLPDashboard() {
 
   const changeMonth = (offset: number) => {
     setViewDate(new Date(viewYear, viewMonth + offset, 1));
+  };
+
+  const renderConflictCard = (c: string, type: 'contradiction' | 'unresolved', index: number) => {
+    // Check if there is an AI Suggestion
+    const hasSuggestion = c.includes('💡 AI Suggestion:') || c.includes('AI Suggestion:');
+    let details = c;
+    let suggestion = '';
+    
+    if (hasSuggestion) {
+      const parts = c.split(/💡?\s*AI Suggestion:/i);
+      details = parts[0]?.trim() || '';
+      suggestion = parts[1]?.trim() || '';
+    }
+
+    // Check if details starts with a sequential number (e.g. "1. ")
+    const numMatch = details.match(/^(\d+\.)\s*(.*)/);
+    let cardNumber = '';
+    if (numMatch) {
+      cardNumber = numMatch[1];
+      details = numMatch[2];
+    }
+
+    return (
+      <div 
+        key={`${type}-${index}`} 
+        className="hud-glass bg-[#131316]/50 hover:bg-[#1a1a24]/60 border border-white/10 p-8 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] relative overflow-hidden transition-all duration-300 hover:border-red-500/30 group"
+      >
+        <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-[#FF9933] to-[#000080] shadow-[0_0_15px_rgba(255,153,51,0.3)]"></div>
+        
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-[10px] font-mono text-red-400 uppercase tracking-widest flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            {type === 'contradiction' ? 'Technical Conflict' : 'Unresolved Blocker'}
+          </h3>
+          {cardNumber && (
+            <span className="text-[10px] font-mono bg-red-500/10 text-red-400 px-2 py-0.5 rounded border border-red-500/20">
+              {cardNumber}
+            </span>
+          )}
+        </div>
+
+        <p className="text-lg text-white font-mono leading-relaxed mb-6 whitespace-pre-line">{details}</p>
+        
+        {suggestion && (
+          <div className="bg-[#000080]/15 border-l-2 border-[#FF9933] p-4 rounded-r-lg font-mono text-sm text-slate-300 shadow-[0_4px_15px_rgba(0,0,0,0.2)] animate-in fade-in slide-in-from-left-4 duration-300">
+            <span className="text-[#FF9933] font-bold flex items-center gap-1.5 mb-1.5 text-[10px] uppercase tracking-wider">
+              💡 AI Suggestion
+            </span>
+            <p className="leading-relaxed text-slate-300 text-xs md:text-sm whitespace-pre-line">{suggestion}</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -650,7 +716,7 @@ export default function NLPDashboard() {
                     onClick={() => setActiveTab(tab.id as any)}
                     onKeyDown={(e) => handleTabKeyDown(e, idx)}
                     className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] ${activeTab === tab.id
-                        ? 'border-white text-white'
+                        ? 'border-[#FF9933] text-white drop-shadow-[0_0_8px_rgba(255,153,51,0.5)]'
                         : 'border-transparent text-slate-600 hover:text-slate-300'
                       }`}
                   >
@@ -714,27 +780,8 @@ export default function NLPDashboard() {
                 <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   {selectedMeeting.conflicts && (selectedMeeting.conflicts.contradictions?.length > 0 || selectedMeeting.conflicts.unresolved?.length > 0) ? (
                     <>
-                      {selectedMeeting.conflicts.contradictions?.map((c, i) => (
-                        <div key={`c-${i}`} className="bg-black border border-white/20 p-8 shadow-2xl relative overflow-hidden group">
-                          <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.8)]"></div>
-                          <h3 className="text-[10px] font-mono text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                            Technical Conflict
-                          </h3>
-                          <p className="text-lg text-white font-mono leading-relaxed">{c}</p>
-                        </div>
-                      ))}
-
-                      {selectedMeeting.conflicts.unresolved?.map((u, i) => (
-                        <div key={`u-${i}`} className="bg-black border border-white/20 p-8 shadow-2xl relative overflow-hidden group">
-                          <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.8)]"></div>
-                          <h3 className="text-[10px] font-mono text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                            Unresolved Blocker
-                          </h3>
-                          <p className="text-lg text-white font-mono leading-relaxed">{u}</p>
-                        </div>
-                      ))}
+                      {selectedMeeting.conflicts.contradictions?.filter(c => !c.includes("No explicit contradictions")).map((c, i) => renderConflictCard(c, 'contradiction', i))}
+                      {selectedMeeting.conflicts.unresolved?.filter(u => !u.includes("No ignored questions")).map((u, i) => renderConflictCard(u, 'unresolved', i))}
                     </>
                   ) : (
                     <div className="text-center p-20 text-slate-600 font-mono border border-dashed border-slate-800 rounded-xl">No conflicts detected in system analysis.</div>
@@ -779,21 +826,36 @@ export default function NLPDashboard() {
                     const isResolved = resolvedActions.has(i);
                     return (
                       <div key={i}
-                        onClick={() => {
-                          const newSet = new Set(resolvedActions);
-                          if (isResolved) newSet.delete(i);
-                          else newSet.add(i);
-                          setResolvedActions(newSet);
-                        }}
-                        className={`p-6 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center gap-5 cursor-pointer transition-all duration-300 ease-in-out ${isResolved ? 'opacity-0 scale-95 pointer-events-none absolute w-full' : 'bg-[#131316] hover:border-slate-600 hover:bg-[#1a1a1f] relative opacity-100 scale-100 shadow-lg'}`}>
+                        className={`p-6 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center gap-5 transition-all duration-300 ease-in-out ${isResolved ? 'opacity-0 scale-95 pointer-events-none absolute w-full' : 'bg-[#131316] hover:border-slate-700 relative opacity-100 scale-100 shadow-lg'}`}>
                         <div className="shrink-0 flex items-center gap-3">
+                          <button 
+                            onClick={() => {
+                              const newSet = new Set(resolvedActions);
+                              if (isResolved) newSet.delete(i);
+                              else newSet.add(i);
+                              setResolvedActions(newSet);
+                            }}
+                            className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isResolved ? 'bg-purple-600 border-purple-600' : 'border-slate-600 hover:border-purple-500'}`}
+                          >
+                            {isResolved && <Check size={12} className="text-white" />}
+                          </button>
                           <span className="text-[10px] font-mono text-slate-300 uppercase tracking-widest border border-slate-700 px-2.5 py-1.5 bg-slate-900/50 rounded">{item.assigned_to}</span>
-                          {item.priority === 'High' && <span className="text-[10px] font-mono text-red-400 uppercase tracking-widest flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-red-400"></span> High</span>}
-                          {item.priority === 'Medium' && <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-amber-400"></span> Medium</span>}
                         </div>
-                        <p className="text-sm flex-1 text-slate-200 font-mono leading-relaxed">{item.task}</p>
-                        <div className="shrink-0">
+                        <p className={`text-sm flex-1 font-mono leading-relaxed transition-all ${isResolved ? 'text-slate-600 line-through' : 'text-slate-200'}`}>{item.task}</p>
+                        <div className="shrink-0 flex items-center gap-4">
                           {item.deadlines?.length > 0 && <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest border border-cyan-900/50 bg-cyan-950/30 px-3 py-1.5 rounded">{item.deadlines.join(', ')}</span>}
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const subject = encodeURIComponent(`Action Item: ${item.task}`);
+                              const body = encodeURIComponent(`Hi ${item.assigned_to},\n\nI'm following up on this action item from our meeting: \n\n"${item.task}"\n\nPriority: ${item.priority}\nDeadline: ${item.deadlines?.join(', ') || 'N/A'}\n\nSent from Kage Dashboard.`);
+                              window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                            }}
+                            className="p-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500 hover:text-white rounded transition-all group"
+                          >
+                            <span className="sr-only">Email Followup</span>
+                            <Mail size={14} className="group-hover:scale-110" />
+                          </button>
                         </div>
                       </div>
                     )
