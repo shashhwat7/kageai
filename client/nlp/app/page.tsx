@@ -274,6 +274,12 @@ const HISTORICAL_MEETINGS: MeetingData[] = [
   }
 ];
 
+const getApiUrl = (path: string) => {
+  if (typeof window === 'undefined') return `http://localhost:5000${path}`;
+  const hostname = window.location.hostname;
+  return `http://${hostname}:5000${path}`;
+};
+
 export default function NLPDashboard() {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300, 500], [1, 0.5, 0]);
@@ -387,7 +393,7 @@ export default function NLPDashboard() {
   // Fetch status and events
   const fetchCalendarStatus = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/calendar/status');
+      const res = await fetch(getApiUrl('/api/calendar/status'));
       const data = await res.json();
       setIsCalendarConnected(data.connected);
       if (data.connected) {
@@ -401,7 +407,7 @@ export default function NLPDashboard() {
   const fetchCalendarEvents = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch('http://localhost:5000/api/calendar/events');
+      const res = await fetch(getApiUrl('/api/calendar/events'));
       const data = await res.json();
       if (data.success && data.events) {
         setCalendarEvents(data.events);
@@ -415,7 +421,8 @@ export default function NLPDashboard() {
 
   const handleConnectCalendar = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/google');
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const res = await fetch(getApiUrl(`/api/auth/google?origin=${encodeURIComponent(origin)}`));
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -427,7 +434,7 @@ export default function NLPDashboard() {
 
   const handleDisconnectCalendar = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/auth/google/disconnect', { method: 'POST' });
+      const res = await fetch(getApiUrl('/api/auth/google/disconnect'), { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         setIsCalendarConnected(false);
@@ -445,7 +452,7 @@ export default function NLPDashboard() {
     }
     setNewMeetingLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/calendar/create', {
+      const res = await fetch(getApiUrl('/api/calendar/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -483,7 +490,10 @@ export default function NLPDashboard() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('sandbox_connect') === 'true') {
-      fetch('http://localhost:5000/api/auth/google/callback?sandbox=true')
+      const origin = window.location.origin;
+      fetch(getApiUrl(`/api/auth/google/callback?sandbox=true&origin=${encodeURIComponent(origin)}`), {
+        headers: { 'Accept': 'application/json' }
+      })
         .then(() => {
           window.history.replaceState({}, document.title, window.location.pathname);
           fetchCalendarStatus();
@@ -919,7 +929,7 @@ export default function NLPDashboard() {
     setChatLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/chat', {
+      const res = await fetch(getApiUrl('/api/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -970,7 +980,7 @@ export default function NLPDashboard() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/upload', {
+      const res = await fetch(getApiUrl('/api/upload'), {
         method: 'POST',
         body: formData
       });

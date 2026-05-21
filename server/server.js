@@ -240,6 +240,7 @@ app.get('/api/calendar/status', (req, res) => {
 
 // 2. Start OAuth Flow
 app.get('/api/auth/google', (req, res) => {
+  const clientOrigin = req.query.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
   if (oauth2Client) {
     const scopes = ['https://www.googleapis.com/auth/calendar.events'];
     const url = oauth2Client.generateAuthUrl({
@@ -250,8 +251,7 @@ app.get('/api/auth/google', (req, res) => {
     res.json({ url });
   } else {
     // Sandbox mode: redirect directly to a simulated callback
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    res.json({ url: `${frontendUrl}?sandbox_connect=true` });
+    res.json({ url: `${clientOrigin}?sandbox_connect=true` });
   }
 });
 
@@ -259,11 +259,14 @@ app.get('/api/auth/google', (req, res) => {
 app.get('/api/auth/google/callback', async (req, res) => {
   const code = req.query.code;
   const isSandbox = req.query.sandbox === 'true' || code === 'sandbox';
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const clientOrigin = req.query.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
 
   if (isSandbox) {
     sandboxAuthenticated = true;
-    return res.redirect(`${frontendUrl}?google_auth=success`);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, mode: "sandbox" });
+    }
+    return res.redirect(`${clientOrigin}?google_auth=success`);
   }
 
   if (!code) {
@@ -274,10 +277,16 @@ app.get('/api/auth/google/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     googleTokens = tokens;
     oauth2Client.setCredentials(tokens);
-    res.redirect(`${frontendUrl}?google_auth=success`);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, mode: "production" });
+    }
+    res.redirect(`${clientOrigin}?google_auth=success`);
   } catch (error) {
     console.error("Error exchanging OAuth code:", error);
-    res.redirect(`${frontendUrl}?google_auth=failed&error=${encodeURIComponent(error.message)}`);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.redirect(`${clientOrigin}?google_auth=failed&error=${encodeURIComponent(error.message)}`);
   }
 });
 
