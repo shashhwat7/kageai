@@ -367,6 +367,144 @@ export default function NLPDashboard() {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  // Google Calendar Integration State
+  const [isCalendarConnected, setIsCalendarConnected] = useState<boolean>(false);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  
+  // Modal State
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState<boolean>(false);
+
+  // New Event Form State
+  const [newMeetingTitle, setNewMeetingTitle] = useState<string>("");
+  const [newMeetingDate, setNewMeetingDate] = useState<string>("");
+  const [newMeetingStartTime, setNewMeetingStartTime] = useState<string>("");
+  const [newMeetingEndTime, setNewMeetingEndTime] = useState<string>("");
+  const [newMeetingDescription, setNewMeetingDescription] = useState<string>("");
+  const [newMeetingAttendees, setNewMeetingAttendees] = useState<string>("");
+  const [newMeetingLoading, setNewMeetingLoading] = useState<boolean>(false);
+
+  // Fetch status and events
+  const fetchCalendarStatus = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/calendar/status');
+      const data = await res.json();
+      setIsCalendarConnected(data.connected);
+      if (data.connected) {
+        fetchCalendarEvents();
+      }
+    } catch (e) {
+      console.error("Failed to fetch calendar connection status", e);
+    }
+  };
+
+  const fetchCalendarEvents = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/calendar/events');
+      const data = await res.json();
+      if (data.success && data.events) {
+        setCalendarEvents(data.events);
+      }
+    } catch (e) {
+      console.error("Failed to fetch calendar events", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleConnectCalendar = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/google');
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error("Failed to initiate calendar connection", e);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/google/disconnect', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setIsCalendarConnected(false);
+        setCalendarEvents([]);
+      }
+    } catch (e) {
+      console.error("Failed to disconnect calendar", e);
+    }
+  };
+
+  const handleScheduleMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMeetingTitle || !newMeetingDate || !newMeetingStartTime || !newMeetingEndTime) {
+      return;
+    }
+    setNewMeetingLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/calendar/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeetingTitle,
+          date: newMeetingDate,
+          startTime: newMeetingStartTime,
+          endTime: newMeetingEndTime,
+          description: newMeetingDescription,
+          attendees: newMeetingAttendees
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsSchedulingModalOpen(false);
+        // Clear fields
+        setNewMeetingTitle("");
+        setNewMeetingDate("");
+        setNewMeetingStartTime("");
+        setNewMeetingEndTime("");
+        setNewMeetingDescription("");
+        setNewMeetingAttendees("");
+        // Reload events
+        fetchCalendarEvents();
+      } else {
+        alert(data.error || "Failed to schedule event.");
+      }
+    } catch (e) {
+      console.error("Failed to schedule meeting", e);
+    } finally {
+      setNewMeetingLoading(false);
+    }
+  };
+
+  // Handle callback parameter loading
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('sandbox_connect') === 'true') {
+      fetch('http://localhost:5000/api/auth/google/callback?sandbox=true')
+        .then(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          fetchCalendarStatus();
+        });
+    } else if (urlParams.get('google_auth') === 'success') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchCalendarStatus();
+    } else {
+      fetchCalendarStatus();
+    }
+  }, []);
+
+  // Periodic polling for events if connected (every 30s)
+  useEffect(() => {
+    if (!isCalendarConnected) return;
+    const interval = setInterval(() => {
+      fetchCalendarEvents();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isCalendarConnected]);
+
   const tabs = [
     { id: 'summary', label: 'Summary' },
     { id: 'conflicts', label: 'Conflicts' },
@@ -894,7 +1032,7 @@ export default function NLPDashboard() {
   const isCurrentMonth = today.getMonth() === viewMonth && today.getFullYear() === viewYear;
   const currentDay = today.getDate();
 
-  const meetingsByDay = new Map<number, MeetingData[]>();
+  const meetingsByDay = new Map<number, any[]>();
   pastMeetings.forEach(m => {
     if (m.timestamp) {
       const mDate = new Date(m.timestamp);
@@ -902,6 +1040,33 @@ export default function NLPDashboard() {
         const d = mDate.getDate();
         if (!meetingsByDay.has(d)) meetingsByDay.set(d, []);
         meetingsByDay.get(d)!.push(m);
+      }
+    }
+  });
+
+  calendarEvents.forEach(evt => {
+    if (evt.timestamp) {
+      const mDate = new Date(evt.timestamp);
+      if (mDate.getMonth() === viewMonth && mDate.getFullYear() === viewYear) {
+        const d = mDate.getDate();
+        if (!meetingsByDay.has(d)) meetingsByDay.set(d, []);
+        const alreadyExists = meetingsByDay.get(d)!.some(existing => existing.id === evt.id);
+        if (!alreadyExists) {
+          meetingsByDay.get(d)!.push({
+            id: evt.id,
+            title: evt.title,
+            timestamp: evt.timestamp,
+            isGoogleEvent: true,
+            summary: {
+              keywords: ["Google Calendar", "External Sync"],
+              executive_summary: [{ speaker: "Google Calendar", text: evt.description || "Synchronized calendar entry." }]
+            },
+            conflicts: { contradictions: [], unresolved: [] },
+            action_items: [],
+            analytics: {},
+            transcript: { segments: [{ time: "00:00:00", speaker: "Google Calendar", text: evt.description || "Synchronized calendar entry." }] }
+          });
+        }
       }
     }
   });
@@ -1299,7 +1464,22 @@ export default function NLPDashboard() {
                 {/* Calendar Widget */}
                 <div className="hud-glass p-6 rounded-2xl border border-slate-800/50 shadow-2xl">
                   <div className="flex justify-between items-center border-b border-slate-800/50 pb-4 mb-4">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tactical_Schedule</h3>
+                    <div className="flex flex-col">
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Tactical_Schedule</h3>
+                      
+                      <button 
+                        onClick={isCalendarConnected ? handleDisconnectCalendar : handleConnectCalendar}
+                        className={`text-[8px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center gap-1.5 transition-all outline-none ${
+                          isCalendarConnected 
+                            ? 'bg-blue-950/30 text-blue-400 border border-blue-500/20 hover:bg-blue-900/20 hover:border-blue-500/40 cursor-pointer' 
+                            : 'bg-slate-900 text-slate-500 border border-slate-800 hover:bg-slate-800 hover:text-slate-400 cursor-pointer'
+                        }`}
+                      >
+                        <span className={`w-1 h-1 rounded-full ${isCalendarConnected ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></span>
+                        {isCalendarConnected ? 'Cal Connected' : 'Connect Google Cal'}
+                        {isSyncing && <span className="animate-spin text-[7px]">&bull;</span>}
+                      </button>
+                    </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-white">
                         &larr;
@@ -1318,7 +1498,10 @@ export default function NLPDashboard() {
                     {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
                       const isToday = isCurrentMonth && d === currentDay;
                       const isSelected = selectedDay === d;
-                      const hasMeeting = meetingsByDay.has(d);
+                      const dayMeetings = meetingsByDay.get(d) || [];
+                      const hasNLPEvent = dayMeetings.some(m => !m.isGoogleEvent);
+                      const hasGoogleEvent = dayMeetings.some(m => m.isGoogleEvent);
+                      const hasMeeting = dayMeetings.length > 0;
                       return (
                         <div key={d} className="relative flex justify-center items-center">
                           <div 
@@ -1328,14 +1511,22 @@ export default function NLPDashboard() {
                               ? 'bg-purple-500/20 text-white border border-purple-500'
                               : isToday 
                                 ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
-                                : hasMeeting
+                                : hasNLPEvent
                                   ? 'bg-purple-900/40 text-purple-200 border border-purple-500/30 hover:bg-purple-800/60'
-                                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                  : hasGoogleEvent
+                                    ? 'bg-blue-950/40 text-blue-200 border border-blue-500/30 hover:bg-blue-800/60'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                           }`}>
                             {d}
                           </div>
                           {hasMeeting && (
-                            <div className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isToday ? 'bg-white' : 'bg-cyan-400'}`}></div>
+                            <div className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
+                              isToday 
+                                ? 'bg-white' 
+                                : hasNLPEvent 
+                                  ? 'bg-cyan-400' 
+                                  : 'bg-blue-400'
+                            }`}></div>
                           )}
                         </div>
                       );
@@ -1363,10 +1554,20 @@ export default function NLPDashboard() {
                         <div 
                           key={idx} 
                           onClick={() => setSelectedMeeting(m)}
-                          className="p-3 bg-purple-500/5 border border-slate-800 rounded-lg cursor-pointer hover:border-purple-500/50 transition-all"
+                          className={`p-3 border rounded-lg cursor-pointer hover:border-purple-500/50 transition-all ${
+                            m.isGoogleEvent 
+                              ? 'bg-blue-950/10 border-blue-900/30 hover:border-blue-500/50' 
+                              : 'bg-purple-500/5 border-slate-800 hover:border-purple-500/50'
+                          }`}
                         >
-                          <p className="text-[11px] font-bold text-white mb-1">{m.title}</p>
-                          <span className="text-[9px] font-mono text-slate-500 uppercase">{m.timestamp?.split(',')[1] || '09:00 AM'}</span>
+                          <p className="text-[11px] font-bold text-white mb-1 flex items-center gap-1.5">
+                            {m.isGoogleEvent && <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>}
+                            {m.title}
+                          </p>
+                          <span className="text-[9px] font-mono text-slate-500 uppercase flex justify-between items-center">
+                            <span>{m.timestamp?.split(',')[1] || '09:00 AM'}</span>
+                            {m.isGoogleEvent && <span className="text-blue-400 text-[8px] font-bold tracking-widest uppercase">Google Cal</span>}
+                          </span>
                         </div>
                       )) || (
                         <div className="py-4 text-center">
@@ -1375,8 +1576,11 @@ export default function NLPDashboard() {
                       )}
                     </div>
 
-                    <button className="w-full py-3 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                      Manual Schedule Override
+                    <button 
+                      onClick={() => setIsSchedulingModalOpen(true)}
+                      className="w-full py-3 bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                    >
+                      Schedule via Google Cal
                     </button>
                   </motion.div>
                 )}
@@ -2058,6 +2262,116 @@ export default function NLPDashboard() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Schedule Meeting Modal */}
+      {isSchedulingModalOpen && (
+        <div className="fixed inset-0 bg-[#0A0A0C]/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-in fade-in duration-200">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="hud-glass p-8 rounded-2xl border border-slate-800 shadow-2xl max-w-lg w-full relative"
+          >
+            <div className="flex justify-between items-center border-b border-slate-800/50 pb-4 mb-6">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono">Schedule_Google_Cal_Event</h3>
+              </div>
+              <button 
+                onClick={() => setIsSchedulingModalOpen(false)}
+                className="text-slate-600 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleMeeting} className="space-y-5 font-mono text-xs text-slate-300">
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 font-bold block">Meeting Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Sprint API Design Review"
+                  value={newMeetingTitle}
+                  onChange={(e) => setNewMeetingTitle(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newMeetingDate}
+                    onChange={(e) => setNewMeetingDate(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Start Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={newMeetingStartTime}
+                    onChange={(e) => setNewMeetingStartTime(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">End Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={newMeetingEndTime}
+                    onChange={(e) => setNewMeetingEndTime(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Description / Agenda</label>
+                <textarea
+                  placeholder="Outline key blockers, topic parameters, and context guidelines..."
+                  rows={3}
+                  value={newMeetingDescription}
+                  onChange={(e) => setNewMeetingDescription(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Attendee Emails (comma separated)</label>
+                <input
+                  type="text"
+                  placeholder="rahul@kage.ai, bruno@kage.ai"
+                  value={newMeetingAttendees}
+                  onChange={(e) => setNewMeetingAttendees(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSchedulingModalOpen(false)}
+                  className="px-4.5 py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-lg text-[10px] uppercase font-bold tracking-wider hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newMeetingLoading}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/50 text-white rounded-lg text-[10px] uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:hover:shadow-none transition-all flex items-center gap-1.5"
+                >
+                  {newMeetingLoading ? 'Scheduling...' : 'Confirm Sync'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
     </div>

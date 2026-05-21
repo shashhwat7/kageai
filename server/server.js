@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { google } = require('googleapis');
 
 // Manually load environment variables from .env
 const envPath = path.join(__dirname, '.env');
@@ -186,6 +187,229 @@ Answer the user's general questions as a Lead Architect and expert AI Meeting An
         console.error("Chat Router Failure:", err);
         res.status(500).json({ error: "Internal Server Error in chat backend", details: err.message });
     }
+});
+
+// Google OAuth & Calendar Setup
+const oauth2Client = (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI)
+  ? new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    )
+  : null;
+
+// Temporary in-memory stores for sandbox mode
+let sandboxAuthenticated = false;
+let sandboxEvents = [
+  {
+    id: "g1",
+    title: "✨ Sprint Sync with Client",
+    description: "Weekly milestone review and feedback collection.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 12, 10, 0).toLocaleString(),
+    isGoogleEvent: true
+  },
+  {
+    id: "g2",
+    title: "⚡ Core Architecture Handshake",
+    description: "Aligning frontend telemetry with backend Express socket configurations.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 15, 14, 0).toLocaleString(),
+    isGoogleEvent: true
+  },
+  {
+    id: "g3",
+    title: "🚀 Production Deployment Audit",
+    description: "Final checklist audit before launching the new sprint build.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 24, 16, 30).toLocaleString(),
+    isGoogleEvent: true
+  }
+];
+
+// Token storage (In-memory for simplicity/sandbox)
+let googleTokens = null;
+
+// 1. Connection Status
+app.get('/api/calendar/status', (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+  
+  res.json({
+    connected: isRealAuth || isSandboxAuth,
+    mode: oauth2Client ? "production" : "sandbox"
+  });
+});
+
+// 2. Start OAuth Flow
+app.get('/api/auth/google', (req, res) => {
+  if (oauth2Client) {
+    const scopes = ['https://www.googleapis.com/auth/calendar.events'];
+    const url = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      prompt: 'consent'
+    });
+    res.json({ url });
+  } else {
+    // Sandbox mode: redirect directly to a simulated callback
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.json({ url: `${frontendUrl}?sandbox_connect=true` });
+  }
+});
+
+// 3. OAuth Callback
+app.get('/api/auth/google/callback', async (req, res) => {
+  const code = req.query.code;
+  const isSandbox = req.query.sandbox === 'true' || code === 'sandbox';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+  if (isSandbox) {
+    sandboxAuthenticated = true;
+    return res.redirect(`${frontendUrl}?google_auth=success`);
+  }
+
+  if (!code) {
+    return res.status(400).send("Authorization code is missing.");
+  }
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    googleTokens = tokens;
+    oauth2Client.setCredentials(tokens);
+    res.redirect(`${frontendUrl}?google_auth=success`);
+  } catch (error) {
+    console.error("Error exchanging OAuth code:", error);
+    res.redirect(`${frontendUrl}?google_auth=failed&error=${encodeURIComponent(error.message)}`);
+  }
+});
+
+// 4. Disconnect Google Calendar
+app.post('/api/auth/google/disconnect', (req, res) => {
+  googleTokens = null;
+  sandboxAuthenticated = false;
+  if (oauth2Client) {
+    oauth2Client.setCredentials(null);
+  }
+  res.json({ success: true });
+});
+
+// 5. Fetch Calendar Events
+app.get('/api/calendar/events', async (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+
+  if (!isRealAuth && !isSandboxAuth) {
+    return res.status(401).json({ error: "Google Calendar not connected." });
+  }
+
+  if (isSandboxAuth) {
+    return res.json({ success: true, events: sandboxEvents });
+  }
+
+  try {
+    oauth2Client.setCredentials(googleTokens);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    
+    // Fetch events from current month
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    const events = response.data.items.map(item => {
+      const startStr = item.start.dateTime || item.start.date;
+      const startDate = new Date(startStr);
+      return {
+        id: item.id,
+        title: item.summary || "Untitled Event",
+        description: item.description || "",
+        timestamp: startDate.toLocaleString(),
+        isGoogleEvent: true
+      };
+    });
+
+    res.json({ success: true, events });
+  } catch (error) {
+    console.error("Error fetching Google Calendar events:", error);
+    res.status(500).json({ error: "Failed to fetch calendar events", details: error.message });
+  }
+});
+
+// 6. Create Calendar Event
+app.post('/api/calendar/create', async (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+
+  if (!isRealAuth && !isSandboxAuth) {
+    return res.status(401).json({ error: "Google Calendar not connected." });
+  }
+
+  const { title, date, startTime, endTime, description, attendees } = req.body;
+  if (!title || !date || !startTime || !endTime) {
+    return res.status(400).json({ error: "Title, date, startTime, and endTime are required." });
+  }
+
+  // Parse date and times
+  const startDateTime = new Date(`${date}T${startTime}:00`).toISOString();
+  const endDateTime = new Date(`${date}T${endTime}:00`).toISOString();
+
+  if (isSandboxAuth) {
+    const newEvent = {
+      id: `sandbox_${Date.now()}`,
+      title,
+      description: description || "",
+      timestamp: new Date(startDateTime).toLocaleString(),
+      isGoogleEvent: true
+    };
+    sandboxEvents.push(newEvent);
+    return res.json({ success: true, event: newEvent });
+  }
+
+  try {
+    oauth2Client.setCredentials(googleTokens);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const attendeesArray = attendees 
+      ? attendees.split(',').map(email => ({ email: email.trim() })).filter(a => a.email)
+      : [];
+
+    const event = {
+      summary: title,
+      description: description || "",
+      start: {
+        dateTime: startDateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      },
+      end: {
+        dateTime: endDateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      },
+      attendees: attendeesArray
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+    });
+
+    const createdEvent = {
+      id: response.data.id,
+      title: response.data.summary || title,
+      description: response.data.description || "",
+      timestamp: new Date(startDateTime).toLocaleString(),
+      isGoogleEvent: true
+    };
+
+    res.json({ success: true, event: createdEvent });
+  } catch (error) {
+    console.error("Error creating Google Calendar event:", error);
+    res.status(500).json({ error: "Failed to create calendar event", details: error.message });
+  }
 });
 
 app.listen(5000, () => console.log('Backend running on port 5000'));
