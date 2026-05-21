@@ -1221,7 +1221,7 @@ export default function NLPDashboard() {
         <MeshGradient
           width={1280}
           height={720}
-          colors={["#3b2a8d", "#000080", "#FF9933", "#0A0A0C"]}
+          colors={["#aaa7d7", "#3b2a8d", "#1e1b4b", "#0A0A0C"]}
           distortion={1.2}
           swirl={1.5}
           grainMixer={0.05}
