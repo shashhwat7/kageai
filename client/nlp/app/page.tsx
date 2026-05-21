@@ -1217,19 +1217,17 @@ export default function NLPDashboard() {
     <div className="relative min-h-screen bg-[#0A0A0C] text-slate-200 font-sans selection:bg-purple-500/30 overflow-hidden">
 
       {/* Background Mesh Gradient */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
-        <div className="absolute inset-0 flex items-center justify-center scale-110">
-          <MeshGradient
-            width={1280}
-            height={720}
-            colors={["#aaa7d7", "#3b2a8d"]}
-            distortion={1}
-            swirl={1}
-            grainMixer={0}
-            grainOverlay={0}
-            speed={0.6}
-          />
-        </div>
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-25 mesh-gradient-container">
+        <MeshGradient
+          width={1280}
+          height={720}
+          colors={["#3b2a8d", "#000080", "#FF9933", "#0A0A0C"]}
+          distortion={1.2}
+          swirl={1.5}
+          grainMixer={0.05}
+          grainOverlay={0.05}
+          speed={0.8}
+        />
       </div>
 
       {/* Scrollable Hero Section */}
@@ -1238,20 +1236,29 @@ export default function NLPDashboard() {
           style={{ opacity: heroOpacity, y: heroY }}
           className="h-screen flex flex-col items-center justify-center relative overflow-hidden px-6"
         >
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/10 via-[#0A0A0C] to-[#0A0A0C] pointer-events-none"></div>
+          {/* Subtle background radial to enhance contrast without box frames */}
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-950/20 via-transparent to-transparent pointer-events-none z-0"></div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="text-center z-10 max-w-5xl"
+            className="text-center z-10 max-w-3xl p-10 md:p-14 rounded-3xl hud-glass border border-slate-800/80 shadow-2xl relative overflow-hidden scanline-container"
           >
-            <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-48 h-48 mx-auto mb-8 drop-shadow-[0_0_30px_rgba(168,85,247,0.3)]" />
-            <h1 className="text-7xl md:text-9xl font-bold text-white tracking-tighter mb-6 drop-shadow-2xl">KAGE.ai</h1>
-            <p className="text-2xl md:text-4xl text-purple-400 font-mono tracking-tight mb-8 drop-shadow-md">
+            {/* Corner Bracket Tech Accents */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-purple-500/40 rounded-tl-2xl"></div>
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-purple-500/40 rounded-tr-2xl"></div>
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-purple-500/40 rounded-bl-2xl"></div>
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-purple-500/40 rounded-br-2xl"></div>
+
+            <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-28 h-28 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)]" />
+            <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-4 drop-shadow-2xl font-mono uppercase">KAGE.ai</h1>
+            
+            <p className="text-xl md:text-2xl text-purple-400 font-mono tracking-widest mb-6 uppercase">
               Transcribe. Analyze. Automate.
             </p>
-            <p className="text-lg md:text-xl text-slate-400 font-sans leading-relaxed max-w-3xl mx-auto">
+            
+            <p className="text-sm md:text-base text-slate-400 font-sans leading-relaxed max-w-xl mx-auto">
               Extract high-fidelity intelligence from your raw meeting transcripts. Kage employs advanced natural language processing to surface technical blockers, track action items, and detect alignment conflicts instantly.
             </p>
           </motion.div>

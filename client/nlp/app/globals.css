@@ -38,6 +38,18 @@ body {
   background-size: 400% 400%;
   animation: aurora 10s ease-in-out infinite;
 }
+
+.mesh-gradient-container canvas,
+.mesh-gradient-container > div,
+.mesh-gradient-container > div > canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: cover !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
 @keyframes scanline {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
