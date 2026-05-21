@@ -2,6 +2,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark, Lock, Plus } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
+import dynamic from 'next/dynamic';
+
+const MeshGradient = dynamic(
+  () => import('@paper-design/shaders-react').then((mod) => mod.MeshGradient),
+  { ssr: false }
+);
 
 interface ActionItem {
   assigned_to: string;
@@ -1208,7 +1214,23 @@ export default function NLPDashboard() {
   };
 
   return (
-    <div className="bg-[#0A0A0C] text-slate-200 font-sans selection:bg-purple-500/30">
+    <div className="relative min-h-screen bg-[#0A0A0C] text-slate-200 font-sans selection:bg-purple-500/30 overflow-hidden">
+
+      {/* Background Mesh Gradient */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
+        <div className="absolute inset-0 flex items-center justify-center scale-110">
+          <MeshGradient
+            width={1280}
+            height={720}
+            colors={["#aaa7d7", "#3b2a8d"]}
+            distortion={1}
+            swirl={1}
+            grainMixer={0}
+            grainOverlay={0}
+            speed={0.6}
+          />
+        </div>
+      </div>
 
       {/* Scrollable Hero Section */}
       {!hasEntered && (
@@ -1250,7 +1272,7 @@ export default function NLPDashboard() {
       )}
 
       {/* Dashboard Section */}
-      <div className="min-h-screen p-8 relative z-10 bg-[#0A0A0C]">
+      <div className="min-h-screen p-8 relative z-10">
         <motion.div
           initial="hidden"
           whileInView="visible"
