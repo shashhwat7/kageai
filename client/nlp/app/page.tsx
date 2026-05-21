@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark, Lock } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -33,6 +33,7 @@ interface TranscriptData {
 
 interface MeetingData {
   title: string;
+  isGoogleEvent?: boolean;
   summary: {
     total_speakers?: number;
     keywords: string[];
@@ -585,6 +586,7 @@ export default function NLPDashboard() {
   ] as const;
 
   const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (selectedMeeting?.isGoogleEvent) return;
     let newIndex = index;
     if (e.key === 'ArrowRight') {
       newIndex = (index + 1) % tabs.length;
@@ -2008,23 +2010,31 @@ export default function NLPDashboard() {
 
               {/* Tabs */}
               <div className="flex gap-8 border-b border-transparent overflow-x-auto scrollbar-hide" role="tablist">
-                {tabs.map((tab, idx) => (
-                  <button
-                    key={tab.id}
-                    id={`tab-${tab.id}`}
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    tabIndex={activeTab === tab.id ? 0 : -1}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                    className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] ${activeTab === tab.id
-                        ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
-                        : 'border-transparent text-slate-600 hover:text-slate-300'
+                {tabs.map((tab, idx) => {
+                  const isLocked = selectedMeeting?.isGoogleEvent && tab.id !== 'summary';
+                  return (
+                    <button
+                      key={tab.id}
+                      id={`tab-${tab.id}`}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      tabIndex={isLocked ? -1 : (activeTab === tab.id ? 0 : -1)}
+                      disabled={isLocked}
+                      onClick={() => !isLocked && setActiveTab(tab.id as any)}
+                      onKeyDown={(e) => !isLocked && handleTabKeyDown(e, idx)}
+                      className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] flex items-center gap-1.5 ${
+                        isLocked
+                          ? 'border-transparent text-slate-500/30 cursor-not-allowed pointer-events-none'
+                          : activeTab === tab.id
+                            ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
+                            : 'border-transparent text-slate-600 hover:text-slate-300'
                       }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                    >
+                      {isLocked && <Lock size={12} className="text-slate-500/50 shrink-0 mr-1.5" />}
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -2102,9 +2112,78 @@ export default function NLPDashboard() {
                               <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight z-10">
                                 {renderHighlightedText(sum.text, selectedMeeting.summary.keywords)}
                               </p>
+                              {selectedMeeting.isGoogleEvent && (
+                                <p className="text-xs font-bold text-slate-500 mt-3 font-mono tracking-wide z-10 uppercase flex items-center gap-1.5 animate-pulse">
+                                  <Lock size={14} className="text-slate-400 shrink-0" />
+                                  Upload your transcript to analyze
+                                </p>
+                              )}
                             </div>
                           );
                         })}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedMeeting.isGoogleEvent && (
+                    <div className="mt-8 hud-glass border border-dashed border-purple-500/20 hover:border-purple-500/40 transition-colors p-8 rounded-xl flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="p-3 bg-purple-500/10 text-purple-400 rounded-full">
+                        <Upload size={24} className="animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-white font-mono uppercase tracking-wider">Upload your transcript to analyze</h4>
+                        <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+                          This is an upcoming synchronized Google Calendar meeting. Process its audio transcript to unlock AI summary extraction, conflict heatmaps, action item trackers, and key analytics.
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-center gap-2 pt-2">
+                        <label className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+                          <Upload size={12} />
+                          <span>Select Transcript File</span>
+                          <input 
+                            type="file" 
+                            accept=".txt" 
+                            className="hidden" 
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              
+                              const formData = new FormData();
+                              formData.append('transcript', file);
+                              
+                              try {
+                                setIsSyncing(true);
+                                const res = await fetch(getApiUrl('/api/upload'), {
+                                  method: 'POST',
+                                  body: formData
+                                });
+                                const result = await res.json();
+                                if (result.success) {
+                                  const newData = result.data;
+                                  setSelectedMeeting({
+                                    ...selectedMeeting,
+                                    isGoogleEvent: false,
+                                    summary: newData.summary,
+                                    action_items: newData.action_items,
+                                    conflicts: newData.conflicts,
+                                    analytics: newData.analytics,
+                                    transcript: newData.transcript,
+                                    ai_recommendation: newData.ai_recommendation
+                                  });
+                                } else {
+                                  alert(result.error || "Failed to process transcript.");
+                                }
+                              } catch (err) {
+                                console.error("Upload failed", err);
+                                alert("Failed to connect to processing engine.");
+                              } finally {
+                                setIsSyncing(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        <span className="text-[10px] text-slate-600 font-mono">Supports raw .txt meeting logs</span>
                       </div>
                     </div>
                   )}
