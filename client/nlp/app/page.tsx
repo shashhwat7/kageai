@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark, Lock, Plus } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -33,6 +33,7 @@ interface TranscriptData {
 
 interface MeetingData {
   title: string;
+  isGoogleEvent?: boolean;
   summary: {
     total_speakers?: number;
     keywords: string[];
@@ -88,6 +89,67 @@ const DecodeText = ({ text }: { text: string }) => {
     </span>
   );
 };
+// Highlight Word Assets
+const IMPORTANT_WORDS = [
+  "Node.js", "Nodejs", "Express", "React", "Vite", "Tailwind", "TailwindCSS", "MongoDB", "Mongoose", "Swagger", "API", "APIs", "endpoint", "endpoints", 
+  "Waterproofing", "Telemetry", "OOM", "OOMEvents", "memory leak", "memory leaks", "K8s", "Kubernetes", "Docker", "Zod", "TypeScript", "JavaScript", 
+  "Aadhaar", "Passport", "biometrics", "cryptographic", "audit", "auditing", "verification", "logistics", "checkInDate", "itineraryDate", 
+  "Casing Material", "O-ring Seals", "Pressure Testing", "Bill of Materials", "polycarbonate", "silicon", "budget", 
+  "payload", "contradiction", "blocker", "blockers", "unresolved", "resolved", "action items"
+];
+
+const renderHighlightedText = (text: string, keywords: string[] = []) => {
+  if (!text) return null;
+  
+  const allKeywords = Array.from(new Set([
+    ...IMPORTANT_WORDS,
+    ...(keywords || [])
+  ])).filter(k => k && k.trim().length > 1);
+
+  if (allKeywords.length === 0) return <span>{text}</span>;
+
+  const escapedKeywords = allKeywords
+    .map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length);
+
+  const regex = new RegExp(`\\b(${escapedKeywords.join('|')})\\b`, 'gi');
+  const parts = text.split(regex);
+  if (parts.length === 1) return <span>{text}</span>;
+
+  return (
+    <span>
+      {parts.map((part, i) => {
+        const isMatch = escapedKeywords.some(k => new RegExp(`^${k}$`, 'i').test(part));
+        if (isMatch) {
+          const useSaffron = i % 2 === 1;
+          if (useSaffron) {
+            return (
+              <span 
+                key={i} 
+                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#FF9933]/15 text-[#D97706] rounded border border-[#FF9933]/30 font-bold text-[0.95em]"
+                title="Corporate Keyword"
+              >
+                {part}
+              </span>
+            );
+          } else {
+            return (
+              <span 
+                key={i} 
+                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#000080]/10 text-[#000080] rounded border border-[#000080]/20 font-bold text-[0.95em]"
+                title="Tech Accent"
+              >
+                {part}
+              </span>
+            );
+          }
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+};
+
 // Shadow Suggestion Logic
 const getShadowSuggestion = (meeting: MeetingData | null) => {
   if (!meeting) return { task: "Awaiting data...", icon: <CircleDashed size={16} />, action: null };
@@ -274,6 +336,12 @@ const HISTORICAL_MEETINGS: MeetingData[] = [
   }
 ];
 
+const getApiUrl = (path: string) => {
+  if (typeof window === 'undefined') return `http://localhost:5000${path}`;
+  const hostname = window.location.hostname;
+  return `http://${hostname}:5000${path}`;
+};
+
 export default function NLPDashboard() {
   const { scrollY } = useScroll();
   const heroOpacity = useTransform(scrollY, [0, 300, 500], [1, 0.5, 0]);
@@ -339,9 +407,9 @@ export default function NLPDashboard() {
   const [resolvedActions, setResolvedActions] = useState<Set<number>>(new Set());
   const [showAIRecommendation, setShowAIRecommendation] = useState<boolean>(true);
 
-  // Highlight Mode & Export States
-  const [highlightMode, setHighlightMode] = useState<boolean>(false);
-  const [highlightedSentences, setHighlightedSentences] = useState<Set<number>>(new Set());
+  // Bookmarking & Export States
+  const [bookmarkedMeetings, setBookmarkedMeetings] = useState<Set<string>>(new Set());
+  const [bookmarkedSentences, setBookmarkedSentences] = useState<Set<number>>(new Set());
 
   // Chatbot Drawer States
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
@@ -367,6 +435,148 @@ export default function NLPDashboard() {
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
+  // Google Calendar Integration State
+  const [isCalendarConnected, setIsCalendarConnected] = useState<boolean>(false);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  
+  // Modal State
+  const [isSchedulingModalOpen, setIsSchedulingModalOpen] = useState<boolean>(false);
+
+  // New Event Form State
+  const [newMeetingTitle, setNewMeetingTitle] = useState<string>("");
+  const [newMeetingDate, setNewMeetingDate] = useState<string>("");
+  const [newMeetingStartTime, setNewMeetingStartTime] = useState<string>("");
+  const [newMeetingEndTime, setNewMeetingEndTime] = useState<string>("");
+  const [newMeetingDescription, setNewMeetingDescription] = useState<string>("");
+  const [newMeetingAttendees, setNewMeetingAttendees] = useState<string>("");
+  const [newMeetingLoading, setNewMeetingLoading] = useState<boolean>(false);
+
+  // Fetch status and events
+  const fetchCalendarStatus = async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/calendar/status'));
+      const data = await res.json();
+      setIsCalendarConnected(data.connected);
+      if (data.connected) {
+        fetchCalendarEvents();
+      }
+    } catch (e) {
+      console.error("Failed to fetch calendar connection status", e);
+    }
+  };
+
+  const fetchCalendarEvents = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch(getApiUrl('/api/calendar/events'));
+      const data = await res.json();
+      if (data.success && data.events) {
+        setCalendarEvents(data.events);
+      }
+    } catch (e) {
+      console.error("Failed to fetch calendar events", e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleConnectCalendar = async () => {
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const res = await fetch(getApiUrl(`/api/auth/google?origin=${encodeURIComponent(origin)}`));
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      console.error("Failed to initiate calendar connection", e);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/auth/google/disconnect'), { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setIsCalendarConnected(false);
+        setCalendarEvents([]);
+      }
+    } catch (e) {
+      console.error("Failed to disconnect calendar", e);
+    }
+  };
+
+  const handleScheduleMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMeetingTitle || !newMeetingDate || !newMeetingStartTime || !newMeetingEndTime) {
+      return;
+    }
+    setNewMeetingLoading(true);
+    try {
+      const res = await fetch(getApiUrl('/api/calendar/create'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeetingTitle,
+          date: newMeetingDate,
+          startTime: newMeetingStartTime,
+          endTime: newMeetingEndTime,
+          description: newMeetingDescription,
+          attendees: newMeetingAttendees
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsSchedulingModalOpen(false);
+        // Clear fields
+        setNewMeetingTitle("");
+        setNewMeetingDate("");
+        setNewMeetingStartTime("");
+        setNewMeetingEndTime("");
+        setNewMeetingDescription("");
+        setNewMeetingAttendees("");
+        // Reload events
+        fetchCalendarEvents();
+      } else {
+        alert(data.error || "Failed to schedule event.");
+      }
+    } catch (e) {
+      console.error("Failed to schedule meeting", e);
+    } finally {
+      setNewMeetingLoading(false);
+    }
+  };
+
+  // Handle callback parameter loading
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('sandbox_connect') === 'true') {
+      const origin = window.location.origin;
+      fetch(getApiUrl(`/api/auth/google/callback?sandbox=true&origin=${encodeURIComponent(origin)}`), {
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          fetchCalendarStatus();
+        });
+    } else if (urlParams.get('google_auth') === 'success') {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      fetchCalendarStatus();
+    } else {
+      fetchCalendarStatus();
+    }
+  }, []);
+
+  // Periodic polling for events if connected (every 30s)
+  useEffect(() => {
+    if (!isCalendarConnected) return;
+    const interval = setInterval(() => {
+      fetchCalendarEvents();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isCalendarConnected]);
+
   const tabs = [
     { id: 'summary', label: 'Summary' },
     { id: 'conflicts', label: 'Conflicts' },
@@ -376,6 +586,7 @@ export default function NLPDashboard() {
   ] as const;
 
   const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (selectedMeeting?.isGoogleEvent) return;
     let newIndex = index;
     if (e.key === 'ArrowRight') {
       newIndex = (index + 1) % tabs.length;
@@ -389,7 +600,6 @@ export default function NLPDashboard() {
     }
   };
 
-  const [uploadMode, setUploadMode] = useState<'file' | 'text'>('file');
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -398,8 +608,7 @@ export default function NLPDashboard() {
   useEffect(() => {
     setResolvedActions(new Set());
     setShowAIRecommendation(true);
-    setHighlightMode(false);
-    setHighlightedSentences(new Set());
+    setBookmarkedSentences(new Set());
   }, [selectedMeeting]);
 
   useEffect(() => {
@@ -670,30 +879,30 @@ export default function NLPDashboard() {
     URL.revokeObjectURL(a.href);
   };
 
-  const getMarkdownContent = (highlightsOnly = false) => {
+  const getMarkdownContent = (bookmarksOnly = false) => {
     if (!selectedMeeting) return "";
     let md = `# Meeting Audit Report: ${selectedMeeting.title}\n`;
     md += `**Timestamp:** ${selectedMeeting.timestamp || 'N/A'}\n\n`;
     
     md += `## Executive Summary\n`;
     const summarySentences = selectedMeeting.summary.executive_summary || [];
-    if (highlightsOnly) {
-      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
-      if (highlighted.length === 0) {
-        md += `*No sections highlighted.*\n`;
+    if (bookmarksOnly) {
+      const bookmarked = summarySentences.filter((_, idx) => bookmarkedSentences.has(idx));
+      if (bookmarked.length === 0) {
+        md += `*No sections bookmarked.*\n`;
       } else {
-        highlighted.forEach(s => {
-          md += `> **[HIGHLIGHTED]** *${s.speaker}*: ${s.text}\n\n`;
+        bookmarked.forEach(s => {
+          md += `> **[BOOKMARKED]** *${s.speaker}*: ${s.text}\n\n`;
         });
       }
     } else {
       summarySentences.forEach((s, idx) => {
-        const isH = highlightedSentences.has(idx);
-        md += `${isH ? '> **[HIGHLIGHTED]** ' : ''}*${s.speaker}*: ${s.text}\n\n`;
+        const isB = bookmarkedSentences.has(idx);
+        md += `${isB ? '> **[BOOKMARKED]** ' : ''}*${s.speaker}*: ${s.text}\n\n`;
       });
     }
 
-    if (!highlightsOnly) {
+    if (!bookmarksOnly) {
       md += `## Regulated Action Items & Commitments\n`;
       selectedMeeting.action_items.forEach((item, idx) => {
         md += `${idx + 1}. **${item.assigned_to}**: ${item.task} (Priority: ${item.priority || 'Medium'}, Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
@@ -711,7 +920,7 @@ export default function NLPDashboard() {
     return md;
   };
 
-  const getPlaintextContent = (highlightsOnly = false) => {
+  const getPlaintextContent = (bookmarksOnly = false) => {
     if (!selectedMeeting) return "";
     let txt = `MEETING AUDIT REPORT: ${selectedMeeting.title}\n`;
     txt += `Timestamp: ${selectedMeeting.timestamp || 'N/A'}\n`;
@@ -719,19 +928,19 @@ export default function NLPDashboard() {
     txt += `EXECUTIVE SUMMARY:\n`;
     
     const summarySentences = selectedMeeting.summary.executive_summary || [];
-    if (highlightsOnly) {
-      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
-      highlighted.forEach(s => {
-        txt += `[HIGHLIGHTED] ${s.speaker}: ${s.text}\n\n`;
+    if (bookmarksOnly) {
+      const bookmarked = summarySentences.filter((_, idx) => bookmarkedSentences.has(idx));
+      bookmarked.forEach(s => {
+        txt += `[BOOKMARKED] ${s.speaker}: ${s.text}\n\n`;
       });
     } else {
       summarySentences.forEach((s, idx) => {
-        const isH = highlightedSentences.has(idx);
-        txt += `${isH ? '[HIGHLIGHTED] ' : ''}${s.speaker}: ${s.text}\n\n`;
+        const isB = bookmarkedSentences.has(idx);
+        txt += `${isB ? '[BOOKMARKED] ' : ''}${s.speaker}: ${s.text}\n\n`;
       });
     }
 
-    if (!highlightsOnly) {
+    if (!bookmarksOnly) {
       txt += `REGULATED ACTION ITEMS & COMMITMENTS:\n`;
       selectedMeeting.action_items.forEach((item, idx) => {
         txt += `${idx + 1}. [${item.priority || 'Medium'}] ${item.assigned_to}: ${item.task} (Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
@@ -741,28 +950,28 @@ export default function NLPDashboard() {
     return txt;
   };
 
-  const handleExport = (format: 'md' | 'json' | 'txt' | 'copy', highlightsOnly = false) => {
+  const handleExport = (format: 'md' | 'json' | 'txt' | 'copy', bookmarksOnly = false) => {
     if (!selectedMeeting) return;
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `${selectedMeeting.title.replace(/\s+/g, '_')}_Audit_${dateStr}`;
 
     if (format === 'md') {
-      const content = getMarkdownContent(highlightsOnly);
+      const content = getMarkdownContent(bookmarksOnly);
       exportAsFile(content, `${filename}.md`, 'text/markdown;charset=utf-8');
     } else if (format === 'txt') {
-      const content = getPlaintextContent(highlightsOnly);
+      const content = getPlaintextContent(bookmarksOnly);
       exportAsFile(content, `${filename}.txt`, 'text/plain;charset=utf-8');
     } else if (format === 'json') {
       let content = "";
-      if (highlightsOnly) {
-        const highlighted = (selectedMeeting.summary.executive_summary || []).filter((_, idx) => highlightedSentences.has(idx));
-        content = JSON.stringify(highlighted, null, 2);
+      if (bookmarksOnly) {
+        const bookmarked = (selectedMeeting.summary.executive_summary || []).filter((_, idx) => bookmarkedSentences.has(idx));
+        content = JSON.stringify(bookmarked, null, 2);
       } else {
         content = JSON.stringify(selectedMeeting, null, 2);
       }
       exportAsFile(content, `${filename}.json`, 'application/json;charset=utf-8');
     } else if (format === 'copy') {
-      const content = getPlaintextContent(highlightsOnly);
+      const content = getPlaintextContent(bookmarksOnly);
       navigator.clipboard.writeText(content).then(() => {
         alert("Meeting summary copied to clipboard!");
       }).catch(err => {
@@ -781,7 +990,7 @@ export default function NLPDashboard() {
     setChatLoading(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/chat', {
+      const res = await fetch(getApiUrl('/api/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -821,9 +1030,9 @@ export default function NLPDashboard() {
     setUploading(true);
     const formData = new FormData();
 
-    if (uploadMode === 'file' && file) {
+    if (file) {
       formData.append('transcript', file);
-    } else if (uploadMode === 'text' && pastedText) {
+    } else if (pastedText) {
       formData.append('text', pastedText);
       formData.append('title', meetingTitle || 'Meeting');
     } else {
@@ -832,7 +1041,7 @@ export default function NLPDashboard() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/upload', {
+      const res = await fetch(getApiUrl('/api/upload'), {
         method: 'POST',
         body: formData
       });
@@ -894,7 +1103,7 @@ export default function NLPDashboard() {
   const isCurrentMonth = today.getMonth() === viewMonth && today.getFullYear() === viewYear;
   const currentDay = today.getDate();
 
-  const meetingsByDay = new Map<number, MeetingData[]>();
+  const meetingsByDay = new Map<number, any[]>();
   pastMeetings.forEach(m => {
     if (m.timestamp) {
       const mDate = new Date(m.timestamp);
@@ -902,6 +1111,33 @@ export default function NLPDashboard() {
         const d = mDate.getDate();
         if (!meetingsByDay.has(d)) meetingsByDay.set(d, []);
         meetingsByDay.get(d)!.push(m);
+      }
+    }
+  });
+
+  calendarEvents.forEach(evt => {
+    if (evt.timestamp) {
+      const mDate = new Date(evt.timestamp);
+      if (mDate.getMonth() === viewMonth && mDate.getFullYear() === viewYear) {
+        const d = mDate.getDate();
+        if (!meetingsByDay.has(d)) meetingsByDay.set(d, []);
+        const alreadyExists = meetingsByDay.get(d)!.some(existing => existing.id === evt.id);
+        if (!alreadyExists) {
+          meetingsByDay.get(d)!.push({
+            id: evt.id,
+            title: evt.title,
+            timestamp: evt.timestamp,
+            isGoogleEvent: true,
+            summary: {
+              keywords: ["Google Calendar", "External Sync"],
+              executive_summary: [{ speaker: "Google Calendar", text: evt.description || "Synchronized calendar entry." }]
+            },
+            conflicts: { contradictions: [], unresolved: [] },
+            action_items: [],
+            analytics: {},
+            transcript: { segments: [{ time: "00:00:00", speaker: "Google Calendar", text: evt.description || "Synchronized calendar entry." }] }
+          });
+        }
       }
     }
   });
@@ -1061,59 +1297,78 @@ export default function NLPDashboard() {
                     </div>
                     <div>
                       <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Terminal_Input</h2>
-                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Feed raw transcript into neural engine</p>
+                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Ingest meeting transcripts or media files for intelligence synthesis</p>
                     </div>
-                  </div>
-
-                  <div className="flex bg-[#0A0A0C] p-1 rounded-lg border border-slate-800 ml-auto md:ml-0">
-                    <button
-                      className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-colors ${uploadMode === 'file' ? 'bg-[#131316] text-white border border-slate-700' : 'text-slate-500 hover:text-slate-300 border border-transparent'}`}
-                      onClick={() => setUploadMode('file')}
-                    >
-                      <FileText size={16} /> File
-                    </button>
-                    <button
-                      className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-colors ${uploadMode === 'text' ? 'bg-[#131316] text-white border border-slate-700' : 'text-slate-500 hover:text-slate-300 border border-transparent'}`}
-                      onClick={() => setUploadMode('text')}
-                    >
-                      <Type size={16} /> Text
-                    </button>
                   </div>
                 </div>
 
-                {uploadMode === 'file' && (
-                  <div className="flex items-center gap-4 p-4 border border-dashed border-slate-700 rounded-xl bg-black/40 hover:bg-black/60 transition-colors">
-                    <input
-                      type="file"
-                      accept=".txt"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-md file:border-0 file:text-xs file:font-mono file:font-bold file:uppercase file:tracking-wider file:bg-purple-500/10 file:text-purple-400 hover:file:bg-purple-500/20 file:transition-colors cursor-pointer w-full text-slate-400 focus:outline-none"
-                    />
-                  </div>
-                )}
-
-                {uploadMode === 'text' && (
-                  <div className="space-y-4 animate-in fade-in">
-                    <input
-                      type="text"
-                      placeholder="Meeting Title"
-                      value={meetingTitle}
-                      onChange={(e) => setMeetingTitle(e.target.value)}
-                      className="w-full max-w-md px-4 py-3 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-white transition-colors"
-                    />
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Meeting Title (Optional - auto-named if file attached)"
+                    value={meetingTitle}
+                    onChange={(e) => setMeetingTitle(e.target.value)}
+                    className="w-full max-w-md px-4 py-3 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-white transition-colors placeholder:text-slate-600 font-mono"
+                  />
+                  
+                  <div className="relative border border-slate-800 rounded-xl bg-[#0A0A0C] focus-within:border-purple-500/50 transition-colors overflow-hidden">
                     <textarea
-                      placeholder="Raw transcript..."
+                      placeholder="Paste raw meeting transcript here, or click the '+' button to attach a .txt, .mp3, or .mp4 file..."
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
-                      className="w-full h-40 p-4 border border-slate-800 rounded-xl text-sm font-mono focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-slate-300 transition-colors resize-none"
+                      className="w-full h-44 p-4 pb-14 border-0 focus:ring-0 text-sm font-sans focus:outline-none bg-transparent text-slate-300 transition-colors resize-none placeholder:text-slate-600"
                     ></textarea>
+
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between border-t border-slate-800/40 pt-2 shrink-0">
+                      <div className="flex items-center gap-3">
+                        <label className="p-2 bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer flex items-center justify-center border border-slate-800">
+                          <Plus size={18} />
+                          <input
+                            type="file"
+                            accept=".txt,.mp3,.mp4"
+                            className="hidden"
+                            onChange={(e) => {
+                              const selectedFile = e.target.files?.[0];
+                              if (selectedFile) {
+                                setFile(selectedFile);
+                                if (!meetingTitle) {
+                                  setMeetingTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+
+                        {file && (
+                          <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/20 text-xs font-mono">
+                            <FileText size={12} className="shrink-0" />
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <button
+                              onClick={() => {
+                                setFile(null);
+                                if (meetingTitle === file.name.replace(/\.[^/.]+$/, "")) {
+                                  setMeetingTitle("");
+                                }
+                              }}
+                              className="hover:text-red-400 transition-colors p-0.5"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase hidden sm:inline">
+                        Supports .txt, .mp3, .mp4
+                      </span>
+                    </div>
                   </div>
-                )}
+                </div>
 
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={handleUpload}
-                    disabled={uploading || (uploadMode === 'file' ? !file : !pastedText)}
+                    disabled={uploading || (!file && !pastedText)}
                     className="px-8 py-3 bg-white text-black font-bold tracking-wide rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]"
                   >
                     {uploading ? (
@@ -1145,8 +1400,11 @@ export default function NLPDashboard() {
                         onClick={() => setSelectedMeeting(meeting)}
                         className="hud-glass p-6 rounded-2xl border border-slate-800/50 hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(128,90,213,0.15)] transition-all cursor-pointer group"
                       >
-                        <div className="flex justify-between items-start mb-3">
+                        <div className="flex justify-between items-start mb-3 w-full gap-2">
                           <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors text-lg">{meeting.title}</h3>
+                          {bookmarkedMeetings.has(meeting.title) && (
+                            <Bookmark size={16} className="text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)] shrink-0 mt-1" />
+                          )}
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono mb-4 block">{meeting.timestamp}</span>
                         <p className="text-sm text-slate-400 line-clamp-2 mb-6 font-mono leading-relaxed">
@@ -1299,7 +1557,22 @@ export default function NLPDashboard() {
                 {/* Calendar Widget */}
                 <div className="hud-glass p-6 rounded-2xl border border-slate-800/50 shadow-2xl">
                   <div className="flex justify-between items-center border-b border-slate-800/50 pb-4 mb-4">
-                    <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tactical_Schedule</h3>
+                    <div className="flex flex-col">
+                      <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Tactical_Schedule</h3>
+                      
+                      <button 
+                        onClick={isCalendarConnected ? handleDisconnectCalendar : handleConnectCalendar}
+                        className={`text-[8px] font-mono font-bold tracking-wider uppercase px-2 py-0.5 rounded-full flex items-center gap-1.5 transition-all outline-none ${
+                          isCalendarConnected 
+                            ? 'bg-blue-950/30 text-blue-400 border border-blue-500/20 hover:bg-blue-900/20 hover:border-blue-500/40 cursor-pointer' 
+                            : 'bg-slate-900 text-slate-500 border border-slate-800 hover:bg-slate-800 hover:text-slate-400 cursor-pointer'
+                        }`}
+                      >
+                        <span className={`w-1 h-1 rounded-full ${isCalendarConnected ? 'bg-blue-400 animate-pulse' : 'bg-slate-600'}`}></span>
+                        {isCalendarConnected ? 'Cal Connected' : 'Connect Google Cal'}
+                        {isSyncing && <span className="animate-spin text-[7px]">&bull;</span>}
+                      </button>
+                    </div>
                     <div className="flex items-center gap-3">
                       <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-slate-800 rounded transition-colors text-slate-500 hover:text-white">
                         &larr;
@@ -1318,7 +1591,10 @@ export default function NLPDashboard() {
                     {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(d => {
                       const isToday = isCurrentMonth && d === currentDay;
                       const isSelected = selectedDay === d;
-                      const hasMeeting = meetingsByDay.has(d);
+                      const dayMeetings = meetingsByDay.get(d) || [];
+                      const hasNLPEvent = dayMeetings.some(m => !m.isGoogleEvent);
+                      const hasGoogleEvent = dayMeetings.some(m => m.isGoogleEvent);
+                      const hasMeeting = dayMeetings.length > 0;
                       return (
                         <div key={d} className="relative flex justify-center items-center">
                           <div 
@@ -1328,14 +1604,22 @@ export default function NLPDashboard() {
                               ? 'bg-purple-500/20 text-white border border-purple-500'
                               : isToday 
                                 ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
-                                : hasMeeting
+                                : hasNLPEvent
                                   ? 'bg-purple-900/40 text-purple-200 border border-purple-500/30 hover:bg-purple-800/60'
-                                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                  : hasGoogleEvent
+                                    ? 'bg-blue-950/40 text-blue-200 border border-blue-500/30 hover:bg-blue-800/60'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                           }`}>
                             {d}
                           </div>
                           {hasMeeting && (
-                            <div className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isToday ? 'bg-white' : 'bg-cyan-400'}`}></div>
+                            <div className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
+                              isToday 
+                                ? 'bg-white' 
+                                : hasNLPEvent 
+                                  ? 'bg-cyan-400' 
+                                  : 'bg-blue-400'
+                            }`}></div>
                           )}
                         </div>
                       );
@@ -1363,10 +1647,20 @@ export default function NLPDashboard() {
                         <div 
                           key={idx} 
                           onClick={() => setSelectedMeeting(m)}
-                          className="p-3 bg-purple-500/5 border border-slate-800 rounded-lg cursor-pointer hover:border-purple-500/50 transition-all"
+                          className={`p-3 border rounded-lg cursor-pointer hover:border-purple-500/50 transition-all ${
+                            m.isGoogleEvent 
+                              ? 'bg-blue-950/10 border-blue-900/30 hover:border-blue-500/50' 
+                              : 'bg-purple-500/5 border-slate-800 hover:border-purple-500/50'
+                          }`}
                         >
-                          <p className="text-[11px] font-bold text-white mb-1">{m.title}</p>
-                          <span className="text-[9px] font-mono text-slate-500 uppercase">{m.timestamp?.split(',')[1] || '09:00 AM'}</span>
+                          <p className="text-[11px] font-bold text-white mb-1 flex items-center gap-1.5">
+                            {m.isGoogleEvent && <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>}
+                            {m.title}
+                          </p>
+                          <span className="text-[9px] font-mono text-slate-500 uppercase flex justify-between items-center">
+                            <span>{m.timestamp?.split(',')[1] || '09:00 AM'}</span>
+                            {m.isGoogleEvent && <span className="text-blue-400 text-[8px] font-bold tracking-widest uppercase">Google Cal</span>}
+                          </span>
                         </div>
                       )) || (
                         <div className="py-4 text-center">
@@ -1375,8 +1669,11 @@ export default function NLPDashboard() {
                       )}
                     </div>
 
-                    <button className="w-full py-3 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-purple-600 hover:text-white transition-all shadow-[0_0_15px_rgba(168,85,247,0.1)]">
-                      Manual Schedule Override
+                    <button 
+                      onClick={() => setIsSchedulingModalOpen(true)}
+                      className="w-full py-3 bg-blue-600/20 text-blue-300 border border-blue-500/30 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                    >
+                      Schedule via Google Cal
                     </button>
                   </motion.div>
                 )}
@@ -1731,23 +2028,31 @@ export default function NLPDashboard() {
 
               {/* Tabs */}
               <div className="flex gap-8 border-b border-transparent overflow-x-auto scrollbar-hide" role="tablist">
-                {tabs.map((tab, idx) => (
-                  <button
-                    key={tab.id}
-                    id={`tab-${tab.id}`}
-                    role="tab"
-                    aria-selected={activeTab === tab.id}
-                    tabIndex={activeTab === tab.id ? 0 : -1}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    onKeyDown={(e) => handleTabKeyDown(e, idx)}
-                    className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] ${activeTab === tab.id
-                        ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
-                        : 'border-transparent text-slate-600 hover:text-slate-300'
+                {tabs.map((tab, idx) => {
+                  const isLocked = selectedMeeting?.isGoogleEvent && tab.id !== 'summary';
+                  return (
+                    <button
+                      key={tab.id}
+                      id={`tab-${tab.id}`}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      tabIndex={isLocked ? -1 : (activeTab === tab.id ? 0 : -1)}
+                      disabled={isLocked}
+                      onClick={() => !isLocked && setActiveTab(tab.id as any)}
+                      onKeyDown={(e) => !isLocked && handleTabKeyDown(e, idx)}
+                      className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] flex items-center gap-1.5 ${
+                        isLocked
+                          ? 'border-transparent text-slate-500/30 cursor-not-allowed pointer-events-none'
+                          : activeTab === tab.id
+                            ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
+                            : 'border-transparent text-slate-600 hover:text-slate-300'
                       }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                    >
+                      {isLocked && <Lock size={12} className="text-slate-500/50 shrink-0 mr-1.5" />}
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1790,44 +2095,47 @@ export default function NLPDashboard() {
                     <div className="bg-slate-100/95 backdrop-blur-xl border border-slate-300/50 rounded-xl p-10 shadow-[0_0_50px_rgba(168,85,247,0.1)] transform transition-transform text-slate-800">
                       <div className="space-y-8">
                         {selectedMeeting.summary.executive_summary.map((sum, i) => {
-                          const isHighlighted = highlightedSentences.has(i);
+                          const isBookmarked = bookmarkedSentences.has(i);
                           return (
                             <div 
                               key={i} 
                               onClick={() => {
-                                if (highlightMode) {
-                                  const next = new Set(highlightedSentences);
-                                  if (next.has(i)) next.delete(i);
-                                  else next.add(i);
-                                  setHighlightedSentences(next);
-                                }
+                                const next = new Set(bookmarkedSentences);
+                                if (next.has(i)) next.delete(i);
+                                else next.add(i);
+                                setBookmarkedSentences(next);
                               }}
-                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative ${
-                                highlightMode 
-                                  ? 'cursor-pointer hover:bg-slate-200/50' 
-                                  : 'border border-transparent'
-                              } ${
-                                isHighlighted 
-                                  ? 'bg-white shadow-[0_10px_30px_rgba(168,85,247,0.08)] border-l-4 border-l-purple-500' 
-                                  : 'border border-transparent'
+                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative cursor-pointer group hover:bg-slate-200/50 ${
+                                isBookmarked 
+                                  ? 'bg-white shadow-[0_10px_30px_rgba(255,153,51,0.08)] border-l-4 border-l-[#FF9933]' 
+                                  : 'border border-transparent bg-slate-50/50 hover:bg-slate-100'
                               }`}
                             >
-                              {isHighlighted && (
-                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-gradient-to-b from-purple-500 to-indigo-600" />
+                              {isBookmarked && (
+                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-[#FF9933]" />
                               )}
                               <div className="flex justify-between items-center z-10">
                                 <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">
                                   {sum.speaker}
                                 </span>
-                                {isHighlighted && (
-                                  <span className="text-[9px] font-mono font-bold text-purple-500 uppercase tracking-wider">
-                                    [Highlighted]
-                                  </span>
-                                )}
+                                <Bookmark 
+                                  size={16} 
+                                  className={`transition-all ${
+                                    isBookmarked 
+                                      ? 'text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)]' 
+                                      : 'text-slate-300 hover:text-[#FF9933] opacity-60 group-hover:opacity-100'
+                                  }`} 
+                                />
                               </div>
                               <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight z-10">
-                                {sum.text}
+                                {renderHighlightedText(sum.text, selectedMeeting.summary.keywords)}
                               </p>
+                              {selectedMeeting.isGoogleEvent && (
+                                <p className="text-xs font-bold text-slate-500 mt-3 font-mono tracking-wide z-10 uppercase flex items-center gap-1.5 animate-pulse">
+                                  <Lock size={14} className="text-slate-400 shrink-0" />
+                                  Upload your transcript to analyze
+                                </p>
+                              )}
                             </div>
                           );
                         })}
@@ -1835,35 +2143,102 @@ export default function NLPDashboard() {
                     </div>
                   )}
 
-                  {/* Export & Highlight Control Bar */}
+                  {selectedMeeting.isGoogleEvent && (
+                    <div className="mt-8 hud-glass border border-dashed border-purple-500/20 hover:border-purple-500/40 transition-colors p-8 rounded-xl flex flex-col items-center justify-center text-center space-y-4">
+                      <div className="p-3 bg-purple-500/10 text-purple-400 rounded-full">
+                        <Upload size={24} className="animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-white font-mono uppercase tracking-wider">Upload your transcript to analyze</h4>
+                        <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+                          This is an upcoming synchronized Google Calendar meeting. Process its audio transcript to unlock AI summary extraction, conflict heatmaps, action item trackers, and key analytics.
+                        </p>
+                      </div>
+                      
+                      <div className="flex flex-col items-center gap-2 pt-2">
+                        <label className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider cursor-pointer flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)] hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]">
+                          <Upload size={12} />
+                          <span>Select Transcript File</span>
+                          <input 
+                            type="file" 
+                            accept=".txt" 
+                            className="hidden" 
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              
+                              const formData = new FormData();
+                              formData.append('transcript', file);
+                              
+                              try {
+                                setIsSyncing(true);
+                                const res = await fetch(getApiUrl('/api/upload'), {
+                                  method: 'POST',
+                                  body: formData
+                                });
+                                const result = await res.json();
+                                if (result.success) {
+                                  const newData = result.data;
+                                  setSelectedMeeting({
+                                    ...selectedMeeting,
+                                    isGoogleEvent: false,
+                                    summary: newData.summary,
+                                    action_items: newData.action_items,
+                                    conflicts: newData.conflicts,
+                                    analytics: newData.analytics,
+                                    transcript: newData.transcript,
+                                    ai_recommendation: newData.ai_recommendation
+                                  });
+                                } else {
+                                  alert(result.error || "Failed to process transcript.");
+                                }
+                              } catch (err) {
+                                console.error("Upload failed", err);
+                                alert("Failed to connect to processing engine.");
+                              } finally {
+                                setIsSyncing(false);
+                              }
+                            }}
+                          />
+                        </label>
+                        <span className="text-[10px] text-slate-600 font-mono">Supports raw .txt meeting logs</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Export & Bookmark Control Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-4 p-4 mt-6 bg-[#131316] border border-slate-800 rounded-xl">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => {
-                          setHighlightMode(!highlightMode);
-                          if (highlightMode) {
-                            setHighlightedSentences(new Set()); // Reset highlights
+                          if (!selectedMeeting) return;
+                          const next = new Set(bookmarkedMeetings);
+                          if (next.has(selectedMeeting.title)) {
+                            next.delete(selectedMeeting.title);
+                          } else {
+                            next.add(selectedMeeting.title);
                           }
+                          setBookmarkedMeetings(next);
                         }}
                         className={`px-4 py-2 rounded-md text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 ${
-                          highlightMode 
-                            ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
-                            : 'bg-[#0A0A0C] text-purple-400 border border-purple-500/30 hover:border-purple-500/60'
+                          bookmarkedMeetings.has(selectedMeeting.title) 
+                            ? 'bg-[#FF9933] text-white shadow-[0_0_15px_rgba(255,153,51,0.4)]' 
+                            : 'bg-[#0A0A0C] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
                         }`}
                       >
-                        <span className={`w-2 h-2 rounded-full ${highlightMode ? 'bg-black animate-pulse' : 'bg-purple-500'}`}></span>
-                        {highlightMode ? 'Disable Highlight' : 'Highlight Mode'}
+                        <Bookmark size={14} className={bookmarkedMeetings.has(selectedMeeting.title) ? 'fill-white text-white' : 'text-[#FF9933]'} />
+                        {bookmarkedMeetings.has(selectedMeeting.title) ? 'Summary Bookmarked' : 'Bookmark Summary'}
                       </button>
-                      {highlightMode && highlightedSentences.size > 0 && (
+                      {bookmarkedSentences.size > 0 && (
                         <span className="text-[10px] font-mono text-slate-400">
-                          {highlightedSentences.size} sentence(s) selected
+                          {bookmarkedSentences.size} sentence(s) bookmarked
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <div className="relative group">
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
+                        <button className="px-4 py-2 bg-[#FF9933] hover:bg-[#FF9933]/90 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
                           <Upload size={12} className="rotate-180" /> Export Options
                         </button>
                         
@@ -1894,26 +2269,26 @@ export default function NLPDashboard() {
                             Copy to Clipboard
                           </button>
 
-                          {highlightedSentences.size > 0 && (
+                          {bookmarkedSentences.size > 0 && (
                             <>
                               <div className="border-t border-slate-800 my-1"></div>
                               <button 
                                 onClick={() => handleExport('md', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Export Highlights Only (.md)
+                                Export Bookmarks Only (.md)
                               </button>
                               <button 
                                 onClick={() => handleExport('json', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Export Highlights Only (.json)
+                                Export Bookmarks Only (.json)
                               </button>
                               <button 
                                 onClick={() => handleExport('copy', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Copy Highlights Only
+                                Copy Bookmarks Only
                               </button>
                             </>
                           )}
@@ -2058,6 +2433,116 @@ export default function NLPDashboard() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Schedule Meeting Modal */}
+      {isSchedulingModalOpen && (
+        <div className="fixed inset-0 bg-[#0A0A0C]/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-in fade-in duration-200">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="hud-glass p-8 rounded-2xl border border-slate-800 shadow-2xl max-w-lg w-full relative"
+          >
+            <div className="flex justify-between items-center border-b border-slate-800/50 pb-4 mb-6">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse"></span>
+                <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono">Schedule_Google_Cal_Event</h3>
+              </div>
+              <button 
+                onClick={() => setIsSchedulingModalOpen(false)}
+                className="text-slate-600 hover:text-white p-1 hover:bg-slate-800 rounded transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleMeeting} className="space-y-5 font-mono text-xs text-slate-300">
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 font-bold block">Meeting Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., Sprint API Design Review"
+                  value={newMeetingTitle}
+                  onChange={(e) => setNewMeetingTitle(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newMeetingDate}
+                    onChange={(e) => setNewMeetingDate(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Start Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={newMeetingStartTime}
+                    onChange={(e) => setNewMeetingStartTime(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-1">
+                  <label className="text-[9px] uppercase tracking-wider text-slate-500 block">End Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={newMeetingEndTime}
+                    onChange={(e) => setNewMeetingEndTime(e.target.value)}
+                    className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-3 py-3 outline-none transition-colors text-white text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Description / Agenda</label>
+                <textarea
+                  placeholder="Outline key blockers, topic parameters, and context guidelines..."
+                  rows={3}
+                  value={newMeetingDescription}
+                  onChange={(e) => setNewMeetingDescription(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-slate-500 block">Attendee Emails (comma separated)</label>
+                <input
+                  type="text"
+                  placeholder="rahul@kage.ai, bruno@kage.ai"
+                  value={newMeetingAttendees}
+                  onChange={(e) => setNewMeetingAttendees(e.target.value)}
+                  className="w-full bg-[#131316] border border-slate-800 focus:border-blue-500/50 rounded-lg px-4.5 py-3 outline-none transition-colors text-white text-xs"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsSchedulingModalOpen(false)}
+                  className="px-4.5 py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-lg text-[10px] uppercase font-bold tracking-wider hover:text-white transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newMeetingLoading}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800/50 text-white rounded-lg text-[10px] uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:hover:shadow-none transition-all flex items-center gap-1.5"
+                >
+                  {newMeetingLoading ? 'Scheduling...' : 'Confirm Sync'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
         </div>
       )}
     </div>

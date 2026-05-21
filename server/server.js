@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { google } = require('googleapis');
 
 // Manually load environment variables from .env
 const envPath = path.join(__dirname, '.env');
@@ -31,59 +32,142 @@ app.use(express.json());
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
-app.post('/api/upload', upload.single('transcript'), (req, res) => {
-    let uploadedFilePath;
-    let isTempFile = false;
-
-    if (req.file) {
-        uploadedFilePath = path.join(__dirname, req.file.path);
-    } else if (req.body.text) {
-        // Handle pasted text
-        const title = req.body.title || "Meeting";
-        const content = `Meeting Transcript: ${title}\n\n${req.body.text}`;
-        uploadedFilePath = path.join(__dirname, 'uploads', `temp_${Date.now()}.txt`);
-        fs.writeFileSync(uploadedFilePath, content);
-        isTempFile = true;
-    } else {
-        return res.status(400).json({ error: "No file or text provided" });
+async function transcribeMedia(filePath, originalName) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error("GROQ_API_KEY is not configured on the server.");
     }
 
-    const pythonExecutable = path.join(__dirname, 'venv', 'Scripts', 'python.exe');
-    // 1. Trigger the Python Intelligence Engine with the uploaded file
-    const pythonProcess = spawn(pythonExecutable, ['intelligence.py', uploadedFilePath]);
+    const fileBuffer = fs.readFileSync(filePath);
+    let mimeType = 'audio/mpeg';
+    if (originalName.toLowerCase().endsWith('.mp4')) {
+        mimeType = 'video/mp4';
+    } else if (originalName.toLowerCase().endsWith('.mp3')) {
+        mimeType = 'audio/mpeg';
+    }
+    
+    const fileBlob = new Blob([fileBuffer], { type: mimeType });
+    const formData = new FormData();
+    formData.append('file', fileBlob, originalName);
+    formData.append('model', 'whisper-large-v3');
+    formData.append('response_format', 'verbose_json');
 
-    let resultData = "";
-    let errorData = "";
-
-    // 2. Collect the output
-    pythonProcess.stdout.on('data', (data) => {
-        resultData += data.toString();
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${apiKey.trim()}`
+        },
+        body: formData
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-        errorData += data.toString();
-    });
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq Audio Transcription failed: ${response.status} - ${errText}`);
+    }
 
-    pythonProcess.on('close', (code) => {
-        // Clean up the uploaded file after processing
-        fs.unlink(uploadedFilePath, (err) => {
-            if (err) console.error("Failed to delete temp file:", err);
+    const result = await response.json();
+    if (result.segments && Array.isArray(result.segments)) {
+        return result.segments.map(seg => {
+            const secs = seg.start;
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = Math.floor(secs % 60);
+            const timeStr = [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+            return `[${timeStr}] Speaker: ${seg.text}`;
+        }).join('\n');
+    }
+    
+    return result.text || "";
+}
+
+app.post('/api/upload', upload.single('transcript'), async (req, res) => {
+    let uploadedFilePath;
+    let isTempFile = false;
+    let originalUploadedPath = null;
+
+    try {
+        if (req.file) {
+            originalUploadedPath = path.join(__dirname, req.file.path);
+            const origNameLower = req.file.originalname.toLowerCase();
+            
+            if (origNameLower.endsWith('.mp3') || origNameLower.endsWith('.mp4')) {
+                console.log(`Media file detected: ${req.file.originalname}. Starting transcription via Groq...`);
+                const transcriptionText = await transcribeMedia(originalUploadedPath, req.file.originalname);
+                
+                // Write transcription to a temporary txt file for Python engine
+                const title = req.file.originalname.replace(/\.[^/.]+$/, "");
+                const content = `Meeting Transcript: ${title}\n\n${transcriptionText}`;
+                uploadedFilePath = path.join(__dirname, 'uploads', `transcribed_${Date.now()}.txt`);
+                fs.writeFileSync(uploadedFilePath, content);
+                isTempFile = true;
+            } else {
+                uploadedFilePath = originalUploadedPath;
+            }
+        } else if (req.body.text) {
+            // Handle pasted text
+            const title = req.body.title || "Meeting";
+            const content = `Meeting Transcript: ${title}\n\n${req.body.text}`;
+            uploadedFilePath = path.join(__dirname, 'uploads', `temp_${Date.now()}.txt`);
+            fs.writeFileSync(uploadedFilePath, content);
+            isTempFile = true;
+        } else {
+            return res.status(400).json({ error: "No file or text provided" });
+        }
+
+        const pythonExecutable = path.join(__dirname, 'venv', 'Scripts', 'python.exe');
+        // 1. Trigger the Python Intelligence Engine with the uploaded file
+        const pythonProcess = spawn(pythonExecutable, ['intelligence.py', uploadedFilePath]);
+
+        let resultData = "";
+        let errorData = "";
+
+        pythonProcess.stdout.on('data', (data) => {
+            resultData += data.toString();
         });
 
-        if (code === 0) {
-            try {
-                const cleanResult = resultData.trim();
-                const parsed = JSON.parse(cleanResult);
-                res.json({ success: true, data: parsed });
-            } catch (err) {
-                console.error("Failed to parse Python output. Raw output:", resultData);
-                res.status(500).json({ error: "Failed to parse Python output", details: resultData });
+        pythonProcess.stderr.on('data', (data) => {
+            errorData += data.toString();
+        });
+
+        pythonProcess.on('close', (code) => {
+            // Clean up files
+            if (isTempFile && uploadedFilePath) {
+                fs.unlink(uploadedFilePath, (err) => {
+                    if (err) console.error("Failed to delete temp file:", err);
+                });
             }
-        } else {
-            console.error("Python Error:", errorData);
-            res.status(500).json({ error: "NLP Processing Failed", details: errorData });
+            if (originalUploadedPath) {
+                fs.unlink(originalUploadedPath, (err) => {
+                    if (err) console.error("Failed to delete original upload:", err);
+                });
+            }
+
+            if (code === 0) {
+                try {
+                    const cleanResult = resultData.trim();
+                    const parsed = JSON.parse(cleanResult);
+                    res.json({ success: true, data: parsed });
+                } catch (err) {
+                    console.error("Failed to parse Python output. Raw output:", resultData);
+                    res.status(500).json({ error: "Failed to parse Python output", details: resultData });
+                }
+            } else {
+                console.error("Python Error:", errorData);
+                res.status(500).json({ error: "NLP Processing Failed", details: errorData });
+            }
+        });
+        
+    } catch (err) {
+        console.error("Transcription/Processing error:", err);
+        // Clean up on error
+        if (isTempFile && uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
         }
-    });
+        if (originalUploadedPath && fs.existsSync(originalUploadedPath)) {
+            fs.unlinkSync(originalUploadedPath);
+        }
+        res.status(500).json({ error: err.message || "Failed to process media file." });
+    }
 });
 
 app.post('/api/chat', async (req, res) => {
@@ -186,6 +270,238 @@ Answer the user's general questions as a Lead Architect and expert AI Meeting An
         console.error("Chat Router Failure:", err);
         res.status(500).json({ error: "Internal Server Error in chat backend", details: err.message });
     }
+});
+
+// Google OAuth & Calendar Setup
+const oauth2Client = (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI)
+  ? new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    )
+  : null;
+
+// Temporary in-memory stores for sandbox mode
+let sandboxAuthenticated = false;
+let sandboxEvents = [
+  {
+    id: "g1",
+    title: "✨ Sprint Sync with Client",
+    description: "Weekly milestone review and feedback collection.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 12, 10, 0).toLocaleString(),
+    isGoogleEvent: true
+  },
+  {
+    id: "g2",
+    title: "⚡ Core Architecture Handshake",
+    description: "Aligning frontend telemetry with backend Express socket configurations.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 15, 14, 0).toLocaleString(),
+    isGoogleEvent: true
+  },
+  {
+    id: "g3",
+    title: "🚀 Production Deployment Audit",
+    description: "Final checklist audit before launching the new sprint build.",
+    timestamp: new Date(new Date().getFullYear(), new Date().getMonth(), 24, 16, 30).toLocaleString(),
+    isGoogleEvent: true
+  }
+];
+
+// Token storage (In-memory for simplicity/sandbox)
+let googleTokens = null;
+
+// 1. Connection Status
+app.get('/api/calendar/status', (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+  
+  res.json({
+    connected: isRealAuth || isSandboxAuth,
+    mode: oauth2Client ? "production" : "sandbox"
+  });
+});
+
+// 2. Start OAuth Flow
+app.get('/api/auth/google', (req, res) => {
+  const clientOrigin = req.query.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
+  if (oauth2Client) {
+    const scopes = ['https://www.googleapis.com/auth/calendar.events'];
+    const url = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: scopes,
+      prompt: 'consent'
+    });
+    res.json({ url });
+  } else {
+    // Sandbox mode: redirect directly to a simulated callback
+    res.json({ url: `${clientOrigin}?sandbox_connect=true` });
+  }
+});
+
+// 3. OAuth Callback
+app.get('/api/auth/google/callback', async (req, res) => {
+  const code = req.query.code;
+  const isSandbox = req.query.sandbox === 'true' || code === 'sandbox';
+  const clientOrigin = req.query.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
+
+  if (isSandbox) {
+    sandboxAuthenticated = true;
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, mode: "sandbox" });
+    }
+    return res.redirect(`${clientOrigin}?google_auth=success`);
+  }
+
+  if (!code) {
+    return res.status(400).send("Authorization code is missing.");
+  }
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    googleTokens = tokens;
+    oauth2Client.setCredentials(tokens);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.json({ success: true, mode: "production" });
+    }
+    res.redirect(`${clientOrigin}?google_auth=success`);
+  } catch (error) {
+    console.error("Error exchanging OAuth code:", error);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.redirect(`${clientOrigin}?google_auth=failed&error=${encodeURIComponent(error.message)}`);
+  }
+});
+
+// 4. Disconnect Google Calendar
+app.post('/api/auth/google/disconnect', (req, res) => {
+  googleTokens = null;
+  sandboxAuthenticated = false;
+  if (oauth2Client) {
+    oauth2Client.setCredentials(null);
+  }
+  res.json({ success: true });
+});
+
+// 5. Fetch Calendar Events
+app.get('/api/calendar/events', async (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+
+  if (!isRealAuth && !isSandboxAuth) {
+    return res.status(401).json({ error: "Google Calendar not connected." });
+  }
+
+  if (isSandboxAuth) {
+    return res.json({ success: true, events: sandboxEvents });
+  }
+
+  try {
+    oauth2Client.setCredentials(googleTokens);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+    
+    // Fetch events from current month
+    const now = new Date();
+    const timeMin = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const timeMax = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    const events = response.data.items.map(item => {
+      const startStr = item.start.dateTime || item.start.date;
+      const startDate = new Date(startStr);
+      return {
+        id: item.id,
+        title: item.summary || "Untitled Event",
+        description: item.description || "",
+        timestamp: startDate.toLocaleString(),
+        isGoogleEvent: true
+      };
+    });
+
+    res.json({ success: true, events });
+  } catch (error) {
+    console.error("Error fetching Google Calendar events:", error);
+    res.status(500).json({ error: "Failed to fetch calendar events", details: error.message });
+  }
+});
+
+// 6. Create Calendar Event
+app.post('/api/calendar/create', async (req, res) => {
+  const isRealAuth = !!(oauth2Client && googleTokens);
+  const isSandboxAuth = !oauth2Client && sandboxAuthenticated;
+
+  if (!isRealAuth && !isSandboxAuth) {
+    return res.status(401).json({ error: "Google Calendar not connected." });
+  }
+
+  const { title, date, startTime, endTime, description, attendees } = req.body;
+  if (!title || !date || !startTime || !endTime) {
+    return res.status(400).json({ error: "Title, date, startTime, and endTime are required." });
+  }
+
+  // Parse date and times
+  const startDateTime = new Date(`${date}T${startTime}:00`).toISOString();
+  const endDateTime = new Date(`${date}T${endTime}:00`).toISOString();
+
+  if (isSandboxAuth) {
+    const newEvent = {
+      id: `sandbox_${Date.now()}`,
+      title,
+      description: description || "",
+      timestamp: new Date(startDateTime).toLocaleString(),
+      isGoogleEvent: true
+    };
+    sandboxEvents.push(newEvent);
+    return res.json({ success: true, event: newEvent });
+  }
+
+  try {
+    oauth2Client.setCredentials(googleTokens);
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const attendeesArray = attendees 
+      ? attendees.split(',').map(email => ({ email: email.trim() })).filter(a => a.email)
+      : [];
+
+    const event = {
+      summary: title,
+      description: description || "",
+      start: {
+        dateTime: startDateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      },
+      end: {
+        dateTime: endDateTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      },
+      attendees: attendeesArray
+    };
+
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      resource: event,
+    });
+
+    const createdEvent = {
+      id: response.data.id,
+      title: response.data.summary || title,
+      description: response.data.description || "",
+      timestamp: new Date(startDateTime).toLocaleString(),
+      isGoogleEvent: true
+    };
+
+    res.json({ success: true, event: createdEvent });
+  } catch (error) {
+    console.error("Error creating Google Calendar event:", error);
+    res.status(500).json({ error: "Failed to create calendar event", details: error.message });
+  }
 });
 
 app.listen(5000, () => console.log('Backend running on port 5000'));
