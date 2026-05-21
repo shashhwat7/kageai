@@ -415,7 +415,7 @@ export default function NLPDashboard() {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [chatInput, setChatInput] = useState<string>("");
   const [chatHistory, setChatHistory] = useState<Array<{ sender: 'user' | 'kage'; text: string }>>([
-    { sender: 'kage', text: "Hello! I am Kage, your Lead Project Architect and Meeting Intelligence Analyst. Ask me anything about the active meeting, draft follow-up emails, or analyze technical conflicts!" }
+    { sender: 'kage', text: "Hello! I am Kage, your Lead Project Architect and Meeting Intelligence Analyst. Ask me anything about the active meeting, draft follow-up emails, or analyze technical conflicts! I was created by Shashwat Srinivasan Gopi" }
   ]);
   const [chatLoading, setChatLoading] = useState<boolean>(false);
   const [sidebarTab, setSidebarTab] = useState<'chat' | 'briefing'>('chat');
