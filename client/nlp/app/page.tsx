@@ -356,6 +356,30 @@ export default function NLPDashboard() {
   const [hasEntered, setHasEntered] = useState<boolean>(false);
   const isScrollingRef = useRef<boolean>(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isHardReload = (window as any).__isHardRefresh === true;
+      if (isHardReload) {
+        sessionStorage.removeItem('hasEnteredDashboard');
+        setHasEntered(false);
+        if ('scrollRestoration' in window.history) {
+          window.history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, 0);
+      } else {
+        const previouslyEntered = sessionStorage.getItem('hasEnteredDashboard') === 'true';
+        if (previouslyEntered) {
+          setHasEntered(true);
+        } else {
+          if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+          }
+          window.scrollTo(0, 0);
+        }
+      }
+    }
+  }, []);
+
   const scrollToDashboard = () => {
     isScrollingRef.current = true;
     window.scrollTo({
@@ -369,6 +393,7 @@ export default function NLPDashboard() {
       htmlEl.style.scrollBehavior = 'auto';
       
       setHasEntered(true);
+      sessionStorage.setItem('hasEnteredDashboard', 'true');
       window.scrollTo(0, 0);
       
       setTimeout(() => {
@@ -388,6 +413,7 @@ export default function NLPDashboard() {
         htmlEl.style.scrollBehavior = 'auto';
         
         setHasEntered(true);
+        sessionStorage.setItem('hasEnteredDashboard', 'true');
         window.scrollTo(0, 0);
         
         setTimeout(() => {
@@ -1214,7 +1240,7 @@ export default function NLPDashboard() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#0A0A0C] text-slate-200 font-sans selection:bg-purple-500/30 overflow-hidden">
+    <div className="relative min-h-screen bg-[#060608] text-slate-200 font-sans selection:bg-purple-500/30 overflow-hidden">
 
       {/* Scrollable Hero Section */}
       {!hasEntered && (
@@ -1227,7 +1253,7 @@ export default function NLPDashboard() {
             <MeshGradient
               width={1280}
               height={720}
-              colors={["#aaa7d7", "#3b2a8d", "#1e1b4b", "#0A0A0C"]}
+              colors={["#B6B2E9", "#6344D4", "#3D2590", "#060608"]}
               distortion={1.2}
               swirl={1.5}
               grainMixer={0.05}
@@ -1273,7 +1299,7 @@ export default function NLPDashboard() {
       )}
 
       {/* Dashboard Section */}
-      <div className="min-h-screen p-8 relative z-10 bg-[#0A0A0C]">
+      <div className="min-h-screen p-8 relative z-10 bg-[#060608]">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -1331,10 +1357,10 @@ export default function NLPDashboard() {
                     placeholder="Meeting Title (Optional - auto-named if file attached)"
                     value={meetingTitle}
                     onChange={(e) => setMeetingTitle(e.target.value)}
-                    className="w-full max-w-md px-4 py-3 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-white transition-colors placeholder:text-slate-600 font-mono"
+                    className="w-full max-w-md px-4 py-3 border border-slate-800/80 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#161233]/70 text-white transition-colors placeholder:text-slate-600 font-mono"
                   />
                   
-                  <div className="relative border border-slate-800 rounded-xl bg-[#0A0A0C] focus-within:border-purple-500/50 transition-colors overflow-hidden">
+                  <div className="relative border border-slate-800/80 rounded-xl bg-[#161233]/70 focus-within:border-purple-500/50 transition-colors overflow-hidden">
                     <textarea
                       placeholder="Paste raw meeting transcript here, or click the '+' button to attach a .txt, .mp3, or .mp4 file..."
                       value={pastedText}
@@ -1506,7 +1532,7 @@ export default function NLPDashboard() {
                       </div>
                     </div>
 
-                    <div className="bg-[#0A0A0C] p-4 rounded-xl border border-slate-800/80 h-[130px] flex flex-col justify-between font-mono text-xs overflow-hidden">
+                    <div className="bg-[#161233]/80 p-4 rounded-xl border border-[#3D2590]/30 h-[130px] flex flex-col justify-between font-mono text-xs overflow-hidden">
                       {heatmapHoverCell ? (
                         (() => {
                           const detail = getHeatmapCellDetail(heatmapHoverCell.topicIdx, heatmapHoverCell.meetingIdx);
@@ -1720,7 +1746,7 @@ export default function NLPDashboard() {
 
       {/* Ask Kage Chatbot sliding drawer */}
       <div 
-        className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-[#0A0A0C]/95 backdrop-blur-2xl border-l border-slate-800 shadow-2xl z-50 flex flex-col transition-all duration-300 transform ${
+        className={`fixed inset-y-0 right-0 w-full sm:w-[450px] bg-[#161233]/95 backdrop-blur-2xl border-l border-[#3D2590]/30 shadow-2xl z-50 flex flex-col transition-all duration-300 transform ${
           isChatOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
@@ -1845,7 +1871,7 @@ export default function NLPDashboard() {
             </div>
 
             {/* Quick Suggestion Chips */}
-            <div className="px-6 py-3 border-t border-slate-800/50 bg-[#0A0A0C] flex flex-wrap gap-2 shrink-0">
+            <div className="px-6 py-3 border-t border-slate-800/50 bg-[#060608] flex flex-wrap gap-2 shrink-0">
               <button 
                 onClick={() => handleSendMessage("What were the key blockers or technical conflicts discussed?")}
                 className="px-2.5 py-1.5 bg-[#131316] hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-mono text-slate-400 hover:text-white tracking-tight uppercase"
@@ -1876,7 +1902,7 @@ export default function NLPDashboard() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSendMessage();
                 }}
-                className="flex-1 px-4 py-2.5 bg-[#0A0A0C] border border-slate-800 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-purple-500/50"
+                className="flex-1 px-4 py-2.5 bg-[#161233]/80 border border-slate-800/80 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-purple-500/50"
               />
               <button 
                 onClick={() => handleSendMessage()}
@@ -1889,7 +1915,7 @@ export default function NLPDashboard() {
         ) : (
           <>
             {/* Neural Briefing Area */}
-            <div className="p-6 border-b border-slate-800/50 bg-[#0A0A0C] space-y-4 shrink-0">
+            <div className="p-6 border-b border-slate-800/50 bg-[#060608] space-y-4 shrink-0">
               <div>
                 <label className="block text-[10px] text-slate-500 uppercase tracking-widest mb-1.5 font-mono">Select/Type Agenda Topic</label>
                 <div className="flex gap-2">
@@ -1901,7 +1927,7 @@ export default function NLPDashboard() {
                       setBriefTopic(e.target.value);
                       generatePreMeetingBrief(e.target.value);
                     }}
-                    className="flex-1 px-3 py-2 bg-[#0A0A0C] border border-slate-800 focus:border-purple-500/50 focus:outline-none rounded text-xs font-mono text-white transition-colors"
+                    className="flex-1 px-3 py-2 bg-[#161233]/80 border border-slate-800/80 focus:border-purple-500/50 focus:outline-none rounded text-xs font-mono text-white transition-colors"
                   />
                   <button
                     onClick={() => generatePreMeetingBrief(briefTopic)}
@@ -2028,7 +2054,7 @@ export default function NLPDashboard() {
       {selectedMeeting && (
         <div 
           onClick={() => setSelectedMeeting(null)}
-          className="fixed inset-0 bg-[#0A0A0C]/90 bg-aurora backdrop-blur-xl z-50 flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300"
+          className="fixed inset-0 bg-[#060608]/90 bg-aurora backdrop-blur-xl z-50 flex items-center justify-center p-4 lg:p-8 animate-in fade-in duration-300"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
@@ -2080,7 +2106,7 @@ export default function NLPDashboard() {
             </div>
 
             {/* Modal Scrollable Content */}
-            <div className="p-8 overflow-y-auto flex-1 relative bg-[#0A0A0C]">
+            <div className="p-8 overflow-y-auto flex-1 relative bg-[#060608]">
               {activeTab === 'summary' && (
                 <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   
@@ -2246,7 +2272,7 @@ export default function NLPDashboard() {
                         className={`px-4 py-2 rounded-md text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 ${
                           bookmarkedMeetings.has(selectedMeeting.title) 
                             ? 'bg-[#FF9933] text-white shadow-[0_0_15px_rgba(255,153,51,0.4)]' 
-                            : 'bg-[#0A0A0C] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
+                            : 'bg-[#060608] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
                         }`}
                       >
                         <Bookmark size={14} className={bookmarkedMeetings.has(selectedMeeting.title) ? 'fill-white text-white' : 'text-[#FF9933]'} />
@@ -2433,7 +2459,7 @@ export default function NLPDashboard() {
 
               {/* Floating AI Recommendation */}
               {activeTab === 'summary' && selectedMeeting.ai_recommendation && showAIRecommendation && (
-                <div className="absolute bottom-8 right-8 max-w-sm bg-[#0A0A0C]/90 backdrop-blur-xl p-6 border border-purple-500/30 shadow-[0_0_30px_rgba(128,90,213,0.15)] rounded-xl z-10 group/tip animate-in slide-in-from-bottom-8 fade-in duration-500">
+                <div className="absolute bottom-8 right-8 max-w-sm bg-[#161233]/95 backdrop-blur-xl p-6 border border-[#3D2590]/40 shadow-[0_0_30px_rgba(99,68,212,0.15)] rounded-xl z-10 group/tip animate-in slide-in-from-bottom-8 fade-in duration-500">
                   <button
                     onClick={() => setShowAIRecommendation(false)}
                     className="absolute top-3 right-3 text-slate-600 hover:text-white p-1.5 bg-slate-900/50 hover:bg-slate-800 rounded-full transition-all"
@@ -2461,7 +2487,7 @@ export default function NLPDashboard() {
 
       {/* Schedule Meeting Modal */}
       {isSchedulingModalOpen && (
-        <div className="fixed inset-0 bg-[#0A0A0C]/80 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 bg-[#060608]/85 backdrop-blur-md flex items-center justify-center z-50 p-6 animate-in fade-in duration-200">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
