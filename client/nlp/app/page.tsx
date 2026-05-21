@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark, Lock } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark, Lock, Plus } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -600,7 +600,6 @@ export default function NLPDashboard() {
     }
   };
 
-  const [uploadMode, setUploadMode] = useState<'file' | 'text'>('file');
   const [file, setFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState("");
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -1031,9 +1030,9 @@ export default function NLPDashboard() {
     setUploading(true);
     const formData = new FormData();
 
-    if (uploadMode === 'file' && file) {
+    if (file) {
       formData.append('transcript', file);
-    } else if (uploadMode === 'text' && pastedText) {
+    } else if (pastedText) {
       formData.append('text', pastedText);
       formData.append('title', meetingTitle || 'Meeting');
     } else {
@@ -1298,59 +1297,78 @@ export default function NLPDashboard() {
                     </div>
                     <div>
                       <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Terminal_Input</h2>
-                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Feed raw transcript into neural engine</p>
+                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Ingest meeting transcripts or media files for intelligence synthesis</p>
                     </div>
-                  </div>
-
-                  <div className="flex bg-[#0A0A0C] p-1 rounded-lg border border-slate-800 ml-auto md:ml-0">
-                    <button
-                      className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-colors ${uploadMode === 'file' ? 'bg-[#131316] text-white border border-slate-700' : 'text-slate-500 hover:text-slate-300 border border-transparent'}`}
-                      onClick={() => setUploadMode('file')}
-                    >
-                      <FileText size={16} /> File
-                    </button>
-                    <button
-                      className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-colors ${uploadMode === 'text' ? 'bg-[#131316] text-white border border-slate-700' : 'text-slate-500 hover:text-slate-300 border border-transparent'}`}
-                      onClick={() => setUploadMode('text')}
-                    >
-                      <Type size={16} /> Text
-                    </button>
                   </div>
                 </div>
 
-                {uploadMode === 'file' && (
-                  <div className="flex items-center gap-4 p-4 border border-dashed border-slate-700 rounded-xl bg-black/40 hover:bg-black/60 transition-colors">
-                    <input
-                      type="file"
-                      accept=".txt"
-                      onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      className="text-sm file:mr-4 file:py-2.5 file:px-5 file:rounded-md file:border-0 file:text-xs file:font-mono file:font-bold file:uppercase file:tracking-wider file:bg-purple-500/10 file:text-purple-400 hover:file:bg-purple-500/20 file:transition-colors cursor-pointer w-full text-slate-400 focus:outline-none"
-                    />
-                  </div>
-                )}
-
-                {uploadMode === 'text' && (
-                  <div className="space-y-4 animate-in fade-in">
-                    <input
-                      type="text"
-                      placeholder="Meeting Title"
-                      value={meetingTitle}
-                      onChange={(e) => setMeetingTitle(e.target.value)}
-                      className="w-full max-w-md px-4 py-3 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-white transition-colors"
-                    />
+                <div className="space-y-4">
+                  <input
+                    type="text"
+                    placeholder="Meeting Title (Optional - auto-named if file attached)"
+                    value={meetingTitle}
+                    onChange={(e) => setMeetingTitle(e.target.value)}
+                    className="w-full max-w-md px-4 py-3 border border-slate-800 rounded-xl text-sm focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-white transition-colors placeholder:text-slate-600 font-mono"
+                  />
+                  
+                  <div className="relative border border-slate-800 rounded-xl bg-[#0A0A0C] focus-within:border-purple-500/50 transition-colors overflow-hidden">
                     <textarea
-                      placeholder="Raw transcript..."
+                      placeholder="Paste raw meeting transcript here, or click the '+' button to attach a .txt, .mp3, or .mp4 file..."
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
-                      className="w-full h-40 p-4 border border-slate-800 rounded-xl text-sm font-mono focus:outline-none focus:border-purple-500/50 bg-[#0A0A0C] text-slate-300 transition-colors resize-none"
+                      className="w-full h-44 p-4 pb-14 border-0 focus:ring-0 text-sm font-sans focus:outline-none bg-transparent text-slate-300 transition-colors resize-none placeholder:text-slate-600"
                     ></textarea>
+
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between border-t border-slate-800/40 pt-2 shrink-0">
+                      <div className="flex items-center gap-3">
+                        <label className="p-2 bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer flex items-center justify-center border border-slate-800">
+                          <Plus size={18} />
+                          <input
+                            type="file"
+                            accept=".txt,.mp3,.mp4"
+                            className="hidden"
+                            onChange={(e) => {
+                              const selectedFile = e.target.files?.[0];
+                              if (selectedFile) {
+                                setFile(selectedFile);
+                                if (!meetingTitle) {
+                                  setMeetingTitle(selectedFile.name.replace(/\.[^/.]+$/, ""));
+                                }
+                              }
+                            }}
+                          />
+                        </label>
+
+                        {file && (
+                          <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 text-purple-400 rounded-md border border-purple-500/20 text-xs font-mono">
+                            <FileText size={12} className="shrink-0" />
+                            <span className="truncate max-w-[200px]">{file.name}</span>
+                            <button
+                              onClick={() => {
+                                setFile(null);
+                                if (meetingTitle === file.name.replace(/\.[^/.]+$/, "")) {
+                                  setMeetingTitle("");
+                                }
+                              }}
+                              className="hover:text-red-400 transition-colors p-0.5"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <span className="text-[10px] text-slate-500 font-mono tracking-wider uppercase hidden sm:inline">
+                        Supports .txt, .mp3, .mp4
+                      </span>
+                    </div>
                   </div>
-                )}
+                </div>
 
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={handleUpload}
-                    disabled={uploading || (uploadMode === 'file' ? !file : !pastedText)}
+                    disabled={uploading || (!file && !pastedText)}
                     className="px-8 py-3 bg-white text-black font-bold tracking-wide rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-200 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]"
                   >
                     {uploading ? (

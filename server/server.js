@@ -32,59 +32,142 @@ app.use(express.json());
 // Configure multer for file uploads
 const upload = multer({ dest: 'uploads/' });
 
-app.post('/api/upload', upload.single('transcript'), (req, res) => {
-    let uploadedFilePath;
-    let isTempFile = false;
-
-    if (req.file) {
-        uploadedFilePath = path.join(__dirname, req.file.path);
-    } else if (req.body.text) {
-        // Handle pasted text
-        const title = req.body.title || "Meeting";
-        const content = `Meeting Transcript: ${title}\n\n${req.body.text}`;
-        uploadedFilePath = path.join(__dirname, 'uploads', `temp_${Date.now()}.txt`);
-        fs.writeFileSync(uploadedFilePath, content);
-        isTempFile = true;
-    } else {
-        return res.status(400).json({ error: "No file or text provided" });
+async function transcribeMedia(filePath, originalName) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+        throw new Error("GROQ_API_KEY is not configured on the server.");
     }
 
-    const pythonExecutable = path.join(__dirname, 'venv', 'Scripts', 'python.exe');
-    // 1. Trigger the Python Intelligence Engine with the uploaded file
-    const pythonProcess = spawn(pythonExecutable, ['intelligence.py', uploadedFilePath]);
+    const fileBuffer = fs.readFileSync(filePath);
+    let mimeType = 'audio/mpeg';
+    if (originalName.toLowerCase().endsWith('.mp4')) {
+        mimeType = 'video/mp4';
+    } else if (originalName.toLowerCase().endsWith('.mp3')) {
+        mimeType = 'audio/mpeg';
+    }
+    
+    const fileBlob = new Blob([fileBuffer], { type: mimeType });
+    const formData = new FormData();
+    formData.append('file', fileBlob, originalName);
+    formData.append('model', 'whisper-large-v3');
+    formData.append('response_format', 'verbose_json');
 
-    let resultData = "";
-    let errorData = "";
-
-    // 2. Collect the output
-    pythonProcess.stdout.on('data', (data) => {
-        resultData += data.toString();
+    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${apiKey.trim()}`
+        },
+        body: formData
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-        errorData += data.toString();
-    });
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Groq Audio Transcription failed: ${response.status} - ${errText}`);
+    }
 
-    pythonProcess.on('close', (code) => {
-        // Clean up the uploaded file after processing
-        fs.unlink(uploadedFilePath, (err) => {
-            if (err) console.error("Failed to delete temp file:", err);
+    const result = await response.json();
+    if (result.segments && Array.isArray(result.segments)) {
+        return result.segments.map(seg => {
+            const secs = seg.start;
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = Math.floor(secs % 60);
+            const timeStr = [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+            return `[${timeStr}] Speaker: ${seg.text}`;
+        }).join('\n');
+    }
+    
+    return result.text || "";
+}
+
+app.post('/api/upload', upload.single('transcript'), async (req, res) => {
+    let uploadedFilePath;
+    let isTempFile = false;
+    let originalUploadedPath = null;
+
+    try {
+        if (req.file) {
+            originalUploadedPath = path.join(__dirname, req.file.path);
+            const origNameLower = req.file.originalname.toLowerCase();
+            
+            if (origNameLower.endsWith('.mp3') || origNameLower.endsWith('.mp4')) {
+                console.log(`Media file detected: ${req.file.originalname}. Starting transcription via Groq...`);
+                const transcriptionText = await transcribeMedia(originalUploadedPath, req.file.originalname);
+                
+                // Write transcription to a temporary txt file for Python engine
+                const title = req.file.originalname.replace(/\.[^/.]+$/, "");
+                const content = `Meeting Transcript: ${title}\n\n${transcriptionText}`;
+                uploadedFilePath = path.join(__dirname, 'uploads', `transcribed_${Date.now()}.txt`);
+                fs.writeFileSync(uploadedFilePath, content);
+                isTempFile = true;
+            } else {
+                uploadedFilePath = originalUploadedPath;
+            }
+        } else if (req.body.text) {
+            // Handle pasted text
+            const title = req.body.title || "Meeting";
+            const content = `Meeting Transcript: ${title}\n\n${req.body.text}`;
+            uploadedFilePath = path.join(__dirname, 'uploads', `temp_${Date.now()}.txt`);
+            fs.writeFileSync(uploadedFilePath, content);
+            isTempFile = true;
+        } else {
+            return res.status(400).json({ error: "No file or text provided" });
+        }
+
+        const pythonExecutable = path.join(__dirname, 'venv', 'Scripts', 'python.exe');
+        // 1. Trigger the Python Intelligence Engine with the uploaded file
+        const pythonProcess = spawn(pythonExecutable, ['intelligence.py', uploadedFilePath]);
+
+        let resultData = "";
+        let errorData = "";
+
+        pythonProcess.stdout.on('data', (data) => {
+            resultData += data.toString();
         });
 
-        if (code === 0) {
-            try {
-                const cleanResult = resultData.trim();
-                const parsed = JSON.parse(cleanResult);
-                res.json({ success: true, data: parsed });
-            } catch (err) {
-                console.error("Failed to parse Python output. Raw output:", resultData);
-                res.status(500).json({ error: "Failed to parse Python output", details: resultData });
+        pythonProcess.stderr.on('data', (data) => {
+            errorData += data.toString();
+        });
+
+        pythonProcess.on('close', (code) => {
+            // Clean up files
+            if (isTempFile && uploadedFilePath) {
+                fs.unlink(uploadedFilePath, (err) => {
+                    if (err) console.error("Failed to delete temp file:", err);
+                });
             }
-        } else {
-            console.error("Python Error:", errorData);
-            res.status(500).json({ error: "NLP Processing Failed", details: errorData });
+            if (originalUploadedPath) {
+                fs.unlink(originalUploadedPath, (err) => {
+                    if (err) console.error("Failed to delete original upload:", err);
+                });
+            }
+
+            if (code === 0) {
+                try {
+                    const cleanResult = resultData.trim();
+                    const parsed = JSON.parse(cleanResult);
+                    res.json({ success: true, data: parsed });
+                } catch (err) {
+                    console.error("Failed to parse Python output. Raw output:", resultData);
+                    res.status(500).json({ error: "Failed to parse Python output", details: resultData });
+                }
+            } else {
+                console.error("Python Error:", errorData);
+                res.status(500).json({ error: "NLP Processing Failed", details: errorData });
+            }
+        });
+        
+    } catch (err) {
+        console.error("Transcription/Processing error:", err);
+        // Clean up on error
+        if (isTempFile && uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+            fs.unlinkSync(uploadedFilePath);
         }
-    });
+        if (originalUploadedPath && fs.existsSync(originalUploadedPath)) {
+            fs.unlinkSync(originalUploadedPath);
+        }
+        res.status(500).json({ error: err.message || "Failed to process media file." });
+    }
 });
 
 app.post('/api/chat', async (req, res) => {
