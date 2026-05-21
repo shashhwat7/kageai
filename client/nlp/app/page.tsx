@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck } from 'lucide-react';
+import { Circle, CircleDashed, CircleX, Upload, FileText, Type, X, Terminal, AudioLines, Lightbulb, Check, Mail, CheckCircle2, ChevronDown, ChevronUp, ShieldCheck, Download, Clipboard, Send, MessageSquare, AlertTriangle, Search, Users, Flame, Activity, FileCheck, Bookmark } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 
 interface ActionItem {
@@ -88,6 +88,67 @@ const DecodeText = ({ text }: { text: string }) => {
     </span>
   );
 };
+// Highlight Word Assets
+const IMPORTANT_WORDS = [
+  "Node.js", "Nodejs", "Express", "React", "Vite", "Tailwind", "TailwindCSS", "MongoDB", "Mongoose", "Swagger", "API", "APIs", "endpoint", "endpoints", 
+  "Waterproofing", "Telemetry", "OOM", "OOMEvents", "memory leak", "memory leaks", "K8s", "Kubernetes", "Docker", "Zod", "TypeScript", "JavaScript", 
+  "Aadhaar", "Passport", "biometrics", "cryptographic", "audit", "auditing", "verification", "logistics", "checkInDate", "itineraryDate", 
+  "Casing Material", "O-ring Seals", "Pressure Testing", "Bill of Materials", "polycarbonate", "silicon", "budget", 
+  "payload", "contradiction", "blocker", "blockers", "unresolved", "resolved", "action items"
+];
+
+const renderHighlightedText = (text: string, keywords: string[] = []) => {
+  if (!text) return null;
+  
+  const allKeywords = Array.from(new Set([
+    ...IMPORTANT_WORDS,
+    ...(keywords || [])
+  ])).filter(k => k && k.trim().length > 1);
+
+  if (allKeywords.length === 0) return <span>{text}</span>;
+
+  const escapedKeywords = allKeywords
+    .map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'))
+    .sort((a, b) => b.length - a.length);
+
+  const regex = new RegExp(`\\b(${escapedKeywords.join('|')})\\b`, 'gi');
+  const parts = text.split(regex);
+  if (parts.length === 1) return <span>{text}</span>;
+
+  return (
+    <span>
+      {parts.map((part, i) => {
+        const isMatch = escapedKeywords.some(k => new RegExp(`^${k}$`, 'i').test(part));
+        if (isMatch) {
+          const useSaffron = i % 2 === 1;
+          if (useSaffron) {
+            return (
+              <span 
+                key={i} 
+                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#FF9933]/15 text-[#D97706] rounded border border-[#FF9933]/30 font-bold text-[0.95em]"
+                title="Corporate Keyword"
+              >
+                {part}
+              </span>
+            );
+          } else {
+            return (
+              <span 
+                key={i} 
+                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#000080]/10 text-[#000080] rounded border border-[#000080]/20 font-bold text-[0.95em]"
+                title="Tech Accent"
+              >
+                {part}
+              </span>
+            );
+          }
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+};
+
 // Shadow Suggestion Logic
 const getShadowSuggestion = (meeting: MeetingData | null) => {
   if (!meeting) return { task: "Awaiting data...", icon: <CircleDashed size={16} />, action: null };
@@ -345,9 +406,9 @@ export default function NLPDashboard() {
   const [resolvedActions, setResolvedActions] = useState<Set<number>>(new Set());
   const [showAIRecommendation, setShowAIRecommendation] = useState<boolean>(true);
 
-  // Highlight Mode & Export States
-  const [highlightMode, setHighlightMode] = useState<boolean>(false);
-  const [highlightedSentences, setHighlightedSentences] = useState<Set<number>>(new Set());
+  // Bookmarking & Export States
+  const [bookmarkedMeetings, setBookmarkedMeetings] = useState<Set<string>>(new Set());
+  const [bookmarkedSentences, setBookmarkedSentences] = useState<Set<number>>(new Set());
 
   // Chatbot Drawer States
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
@@ -546,8 +607,7 @@ export default function NLPDashboard() {
   useEffect(() => {
     setResolvedActions(new Set());
     setShowAIRecommendation(true);
-    setHighlightMode(false);
-    setHighlightedSentences(new Set());
+    setBookmarkedSentences(new Set());
   }, [selectedMeeting]);
 
   useEffect(() => {
@@ -818,30 +878,30 @@ export default function NLPDashboard() {
     URL.revokeObjectURL(a.href);
   };
 
-  const getMarkdownContent = (highlightsOnly = false) => {
+  const getMarkdownContent = (bookmarksOnly = false) => {
     if (!selectedMeeting) return "";
     let md = `# Meeting Audit Report: ${selectedMeeting.title}\n`;
     md += `**Timestamp:** ${selectedMeeting.timestamp || 'N/A'}\n\n`;
     
     md += `## Executive Summary\n`;
     const summarySentences = selectedMeeting.summary.executive_summary || [];
-    if (highlightsOnly) {
-      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
-      if (highlighted.length === 0) {
-        md += `*No sections highlighted.*\n`;
+    if (bookmarksOnly) {
+      const bookmarked = summarySentences.filter((_, idx) => bookmarkedSentences.has(idx));
+      if (bookmarked.length === 0) {
+        md += `*No sections bookmarked.*\n`;
       } else {
-        highlighted.forEach(s => {
-          md += `> **[HIGHLIGHTED]** *${s.speaker}*: ${s.text}\n\n`;
+        bookmarked.forEach(s => {
+          md += `> **[BOOKMARKED]** *${s.speaker}*: ${s.text}\n\n`;
         });
       }
     } else {
       summarySentences.forEach((s, idx) => {
-        const isH = highlightedSentences.has(idx);
-        md += `${isH ? '> **[HIGHLIGHTED]** ' : ''}*${s.speaker}*: ${s.text}\n\n`;
+        const isB = bookmarkedSentences.has(idx);
+        md += `${isB ? '> **[BOOKMARKED]** ' : ''}*${s.speaker}*: ${s.text}\n\n`;
       });
     }
 
-    if (!highlightsOnly) {
+    if (!bookmarksOnly) {
       md += `## Regulated Action Items & Commitments\n`;
       selectedMeeting.action_items.forEach((item, idx) => {
         md += `${idx + 1}. **${item.assigned_to}**: ${item.task} (Priority: ${item.priority || 'Medium'}, Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
@@ -859,7 +919,7 @@ export default function NLPDashboard() {
     return md;
   };
 
-  const getPlaintextContent = (highlightsOnly = false) => {
+  const getPlaintextContent = (bookmarksOnly = false) => {
     if (!selectedMeeting) return "";
     let txt = `MEETING AUDIT REPORT: ${selectedMeeting.title}\n`;
     txt += `Timestamp: ${selectedMeeting.timestamp || 'N/A'}\n`;
@@ -867,19 +927,19 @@ export default function NLPDashboard() {
     txt += `EXECUTIVE SUMMARY:\n`;
     
     const summarySentences = selectedMeeting.summary.executive_summary || [];
-    if (highlightsOnly) {
-      const highlighted = summarySentences.filter((_, idx) => highlightedSentences.has(idx));
-      highlighted.forEach(s => {
-        txt += `[HIGHLIGHTED] ${s.speaker}: ${s.text}\n\n`;
+    if (bookmarksOnly) {
+      const bookmarked = summarySentences.filter((_, idx) => bookmarkedSentences.has(idx));
+      bookmarked.forEach(s => {
+        txt += `[BOOKMARKED] ${s.speaker}: ${s.text}\n\n`;
       });
     } else {
       summarySentences.forEach((s, idx) => {
-        const isH = highlightedSentences.has(idx);
-        txt += `${isH ? '[HIGHLIGHTED] ' : ''}${s.speaker}: ${s.text}\n\n`;
+        const isB = bookmarkedSentences.has(idx);
+        txt += `${isB ? '[BOOKMARKED] ' : ''}${s.speaker}: ${s.text}\n\n`;
       });
     }
 
-    if (!highlightsOnly) {
+    if (!bookmarksOnly) {
       txt += `REGULATED ACTION ITEMS & COMMITMENTS:\n`;
       selectedMeeting.action_items.forEach((item, idx) => {
         txt += `${idx + 1}. [${item.priority || 'Medium'}] ${item.assigned_to}: ${item.task} (Deadline: ${item.deadlines?.join(', ') || 'N/A'})\n`;
@@ -889,28 +949,28 @@ export default function NLPDashboard() {
     return txt;
   };
 
-  const handleExport = (format: 'md' | 'json' | 'txt' | 'copy', highlightsOnly = false) => {
+  const handleExport = (format: 'md' | 'json' | 'txt' | 'copy', bookmarksOnly = false) => {
     if (!selectedMeeting) return;
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `${selectedMeeting.title.replace(/\s+/g, '_')}_Audit_${dateStr}`;
 
     if (format === 'md') {
-      const content = getMarkdownContent(highlightsOnly);
+      const content = getMarkdownContent(bookmarksOnly);
       exportAsFile(content, `${filename}.md`, 'text/markdown;charset=utf-8');
     } else if (format === 'txt') {
-      const content = getPlaintextContent(highlightsOnly);
+      const content = getPlaintextContent(bookmarksOnly);
       exportAsFile(content, `${filename}.txt`, 'text/plain;charset=utf-8');
     } else if (format === 'json') {
       let content = "";
-      if (highlightsOnly) {
-        const highlighted = (selectedMeeting.summary.executive_summary || []).filter((_, idx) => highlightedSentences.has(idx));
-        content = JSON.stringify(highlighted, null, 2);
+      if (bookmarksOnly) {
+        const bookmarked = (selectedMeeting.summary.executive_summary || []).filter((_, idx) => bookmarkedSentences.has(idx));
+        content = JSON.stringify(bookmarked, null, 2);
       } else {
         content = JSON.stringify(selectedMeeting, null, 2);
       }
       exportAsFile(content, `${filename}.json`, 'application/json;charset=utf-8');
     } else if (format === 'copy') {
-      const content = getPlaintextContent(highlightsOnly);
+      const content = getPlaintextContent(bookmarksOnly);
       navigator.clipboard.writeText(content).then(() => {
         alert("Meeting summary copied to clipboard!");
       }).catch(err => {
@@ -1320,8 +1380,11 @@ export default function NLPDashboard() {
                         onClick={() => setSelectedMeeting(meeting)}
                         className="hud-glass p-6 rounded-2xl border border-slate-800/50 hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(128,90,213,0.15)] transition-all cursor-pointer group"
                       >
-                        <div className="flex justify-between items-start mb-3">
+                        <div className="flex justify-between items-start mb-3 w-full gap-2">
                           <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors text-lg">{meeting.title}</h3>
+                          {bookmarkedMeetings.has(meeting.title) && (
+                            <Bookmark size={16} className="text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)] shrink-0 mt-1" />
+                          )}
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono mb-4 block">{meeting.timestamp}</span>
                         <p className="text-sm text-slate-400 line-clamp-2 mb-6 font-mono leading-relaxed">
@@ -2004,43 +2067,40 @@ export default function NLPDashboard() {
                     <div className="bg-slate-100/95 backdrop-blur-xl border border-slate-300/50 rounded-xl p-10 shadow-[0_0_50px_rgba(168,85,247,0.1)] transform transition-transform text-slate-800">
                       <div className="space-y-8">
                         {selectedMeeting.summary.executive_summary.map((sum, i) => {
-                          const isHighlighted = highlightedSentences.has(i);
+                          const isBookmarked = bookmarkedSentences.has(i);
                           return (
                             <div 
                               key={i} 
                               onClick={() => {
-                                if (highlightMode) {
-                                  const next = new Set(highlightedSentences);
-                                  if (next.has(i)) next.delete(i);
-                                  else next.add(i);
-                                  setHighlightedSentences(next);
-                                }
+                                const next = new Set(bookmarkedSentences);
+                                if (next.has(i)) next.delete(i);
+                                else next.add(i);
+                                setBookmarkedSentences(next);
                               }}
-                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative ${
-                                highlightMode 
-                                  ? 'cursor-pointer hover:bg-slate-200/50' 
-                                  : 'border border-transparent'
-                              } ${
-                                isHighlighted 
-                                  ? 'bg-white shadow-[0_10px_30px_rgba(168,85,247,0.08)] border-l-4 border-l-purple-500' 
-                                  : 'border border-transparent'
+                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative cursor-pointer group hover:bg-slate-200/50 ${
+                                isBookmarked 
+                                  ? 'bg-white shadow-[0_10px_30px_rgba(255,153,51,0.08)] border-l-4 border-l-[#FF9933]' 
+                                  : 'border border-transparent bg-slate-50/50 hover:bg-slate-100'
                               }`}
                             >
-                              {isHighlighted && (
-                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-gradient-to-b from-purple-500 to-indigo-600" />
+                              {isBookmarked && (
+                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-[#FF9933]" />
                               )}
                               <div className="flex justify-between items-center z-10">
                                 <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">
                                   {sum.speaker}
                                 </span>
-                                {isHighlighted && (
-                                  <span className="text-[9px] font-mono font-bold text-purple-500 uppercase tracking-wider">
-                                    [Highlighted]
-                                  </span>
-                                )}
+                                <Bookmark 
+                                  size={16} 
+                                  className={`transition-all ${
+                                    isBookmarked 
+                                      ? 'text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)]' 
+                                      : 'text-slate-300 hover:text-[#FF9933] opacity-60 group-hover:opacity-100'
+                                  }`} 
+                                />
                               </div>
                               <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight z-10">
-                                {sum.text}
+                                {renderHighlightedText(sum.text, selectedMeeting.summary.keywords)}
                               </p>
                             </div>
                           );
@@ -2049,35 +2109,39 @@ export default function NLPDashboard() {
                     </div>
                   )}
 
-                  {/* Export & Highlight Control Bar */}
+                  {/* Export & Bookmark Control Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-4 p-4 mt-6 bg-[#131316] border border-slate-800 rounded-xl">
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => {
-                          setHighlightMode(!highlightMode);
-                          if (highlightMode) {
-                            setHighlightedSentences(new Set()); // Reset highlights
+                          if (!selectedMeeting) return;
+                          const next = new Set(bookmarkedMeetings);
+                          if (next.has(selectedMeeting.title)) {
+                            next.delete(selectedMeeting.title);
+                          } else {
+                            next.add(selectedMeeting.title);
                           }
+                          setBookmarkedMeetings(next);
                         }}
                         className={`px-4 py-2 rounded-md text-xs font-bold font-mono uppercase tracking-wider transition-all flex items-center gap-2 ${
-                          highlightMode 
-                            ? 'bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
-                            : 'bg-[#0A0A0C] text-purple-400 border border-purple-500/30 hover:border-purple-500/60'
+                          bookmarkedMeetings.has(selectedMeeting.title) 
+                            ? 'bg-[#FF9933] text-white shadow-[0_0_15px_rgba(255,153,51,0.4)]' 
+                            : 'bg-[#0A0A0C] text-[#FF9933] border border-[#FF9933]/30 hover:border-[#FF9933]/60'
                         }`}
                       >
-                        <span className={`w-2 h-2 rounded-full ${highlightMode ? 'bg-black animate-pulse' : 'bg-purple-500'}`}></span>
-                        {highlightMode ? 'Disable Highlight' : 'Highlight Mode'}
+                        <Bookmark size={14} className={bookmarkedMeetings.has(selectedMeeting.title) ? 'fill-white text-white' : 'text-[#FF9933]'} />
+                        {bookmarkedMeetings.has(selectedMeeting.title) ? 'Summary Bookmarked' : 'Bookmark Summary'}
                       </button>
-                      {highlightMode && highlightedSentences.size > 0 && (
+                      {bookmarkedSentences.size > 0 && (
                         <span className="text-[10px] font-mono text-slate-400">
-                          {highlightedSentences.size} sentence(s) selected
+                          {bookmarkedSentences.size} sentence(s) bookmarked
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <div className="relative group">
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
+                        <button className="px-4 py-2 bg-[#FF9933] hover:bg-[#FF9933]/90 text-white rounded-md text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-2 transition-all">
                           <Upload size={12} className="rotate-180" /> Export Options
                         </button>
                         
@@ -2108,26 +2172,26 @@ export default function NLPDashboard() {
                             Copy to Clipboard
                           </button>
 
-                          {highlightedSentences.size > 0 && (
+                          {bookmarkedSentences.size > 0 && (
                             <>
                               <div className="border-t border-slate-800 my-1"></div>
                               <button 
                                 onClick={() => handleExport('md', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Export Highlights Only (.md)
+                                Export Bookmarks Only (.md)
                               </button>
                               <button 
                                 onClick={() => handleExport('json', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Export Highlights Only (.json)
+                                Export Bookmarks Only (.json)
                               </button>
                               <button 
                                 onClick={() => handleExport('copy', true)}
-                                className="w-full text-left px-4 py-2 text-xs font-mono text-purple-400 hover:bg-slate-800 transition-colors"
+                                className="w-full text-left px-4 py-2 text-xs font-mono text-[#FF9933] hover:bg-slate-800 transition-colors font-semibold"
                               >
-                                Copy Highlights Only
+                                Copy Bookmarks Only
                               </button>
                             </>
                           )}
