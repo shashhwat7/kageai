@@ -1243,22 +1243,16 @@ export default function NLPDashboard() {
             initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
             animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
             transition={{ duration: 1.2, ease: "easeOut" }}
-            className="text-center z-10 max-w-3xl p-10 md:p-14 rounded-3xl hud-glass border border-slate-800/80 shadow-2xl relative overflow-hidden scanline-container"
+            className="text-center z-10 max-w-5xl"
           >
-            {/* Corner Bracket Tech Accents */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-purple-500/40 rounded-tl-2xl"></div>
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-purple-500/40 rounded-tr-2xl"></div>
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-purple-500/40 rounded-bl-2xl"></div>
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-purple-500/40 rounded-br-2xl"></div>
-
-            <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-28 h-28 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)]" />
-            <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-4 drop-shadow-2xl font-mono uppercase">KAGE.ai</h1>
+            <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-48 h-48 mx-auto mb-8 drop-shadow-[0_0_30px_rgba(168,85,247,0.3)] animate-pulse" style={{ animationDuration: '4s' }} />
+            <h1 className="text-7xl md:text-9xl font-bold tracking-tighter mb-6 font-mono uppercase glass-text">KAGE.ai</h1>
             
-            <p className="text-xl md:text-2xl text-purple-400 font-mono tracking-widest mb-6 uppercase">
+            <p className="text-2xl md:text-4xl text-purple-400 font-mono tracking-tight mb-8 drop-shadow-md uppercase">
               Transcribe. Analyze. Automate.
             </p>
             
-            <p className="text-sm md:text-base text-slate-400 font-sans leading-relaxed max-w-xl mx-auto">
+            <p className="text-lg md:text-xl text-slate-400 font-sans leading-relaxed max-w-3xl mx-auto">
               Extract high-fidelity intelligence from your raw meeting transcripts. Kage employs advanced natural language processing to surface technical blockers, track action items, and detect alignment conflicts instantly.
             </p>
           </motion.div>

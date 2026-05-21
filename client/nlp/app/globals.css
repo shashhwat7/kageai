@@ -39,15 +39,32 @@ body {
   animation: aurora 10s ease-in-out infinite;
 }
 
-.mesh-gradient-container canvas,
-.mesh-gradient-container > div,
-.mesh-gradient-container > div > canvas {
+.mesh-gradient-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  object-fit: cover !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.mesh-gradient-container * {
+  width: 100vw !important;
+  height: 100vh !important;
   position: absolute !important;
   top: 0 !important;
   left: 0 !important;
+  object-fit: cover !important;
+}
+
+.glass-text {
+  background: linear-gradient(to bottom, #ffffff 40%, rgba(255, 255, 255, 0.4) 75%, rgba(168, 85, 247, 0.25) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  text-shadow: 0 0 35px rgba(168, 85, 247, 0.15);
 }
 
 @keyframes scanline {
