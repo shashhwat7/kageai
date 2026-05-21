@@ -1216,26 +1216,26 @@ export default function NLPDashboard() {
   return (
     <div className="relative min-h-screen bg-[#0A0A0C] text-slate-200 font-sans selection:bg-purple-500/30 overflow-hidden">
 
-      {/* Background Mesh Gradient */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-25 mesh-gradient-container">
-        <MeshGradient
-          width={1280}
-          height={720}
-          colors={["#aaa7d7", "#3b2a8d", "#1e1b4b", "#0A0A0C"]}
-          distortion={1.2}
-          swirl={1.5}
-          grainMixer={0.05}
-          grainOverlay={0.05}
-          speed={0.8}
-        />
-      </div>
-
       {/* Scrollable Hero Section */}
       {!hasEntered && (
         <motion.div 
           style={{ opacity: heroOpacity, y: heroY }}
           className="h-screen flex flex-col items-center justify-center relative overflow-hidden px-6"
         >
+          {/* Background Mesh Gradient (Strictly Scoped to Hero Section) */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-25 mesh-gradient-container">
+            <MeshGradient
+              width={1280}
+              height={720}
+              colors={["#aaa7d7", "#3b2a8d", "#1e1b4b", "#0A0A0C"]}
+              distortion={1.2}
+              swirl={1.5}
+              grainMixer={0.05}
+              grainOverlay={0.05}
+              speed={0.8}
+            />
+          </div>
+
           {/* Subtle background radial to enhance contrast without box frames */}
           <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-950/20 via-transparent to-transparent pointer-events-none z-0"></div>
 
@@ -1273,7 +1273,7 @@ export default function NLPDashboard() {
       )}
 
       {/* Dashboard Section */}
-      <div className="min-h-screen p-8 relative z-10">
+      <div className="min-h-screen p-8 relative z-10 bg-[#0A0A0C]">
         <motion.div
           initial="hidden"
           whileInView="visible"
