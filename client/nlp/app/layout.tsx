@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import { Cormorant_Garamond, Inter, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 
@@ -11,6 +11,18 @@ const cormorantGaramond = Cormorant_Garamond({
 
 const inter = Inter({
   variable: "--font-jetbrains-mono", // keeping variable name to avoid refactoring whole CSS
+  subsets: ["latin"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  weight: ["400"],
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+});
+
+const interFont = Inter({
+  weight: ["300", "400", "500"],
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -32,7 +44,7 @@ export default async function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorantGaramond.variable} ${inter.variable} h-full antialiased`}
+      className={`${cormorantGaramond.variable} ${inter.variable} ${instrumentSerif.variable} ${interFont.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans bg-[#060608] text-slate-200">
         {isHardRefresh && (

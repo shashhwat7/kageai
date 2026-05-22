@@ -114,10 +114,12 @@ const renderHighlightedText = (text: string, keywords: string[] = []) => {
 
   if (allKeywords.length === 0) return <span>{text}</span>;
 
+  // Escape special regex characters in keywords and sort by length descending
   const escapedKeywords = allKeywords
     .map(k => k.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'))
     .sort((a, b) => b.length - a.length);
 
+  // Match using word boundaries. For keywords that have non-word chars (like O-ring), we handle them.
   const regex = new RegExp(`\\b(${escapedKeywords.join('|')})\\b`, 'gi');
   const parts = text.split(regex);
   if (parts.length === 1) return <span>{text}</span>;
@@ -125,30 +127,18 @@ const renderHighlightedText = (text: string, keywords: string[] = []) => {
   return (
     <span>
       {parts.map((part, i) => {
-        const isMatch = escapedKeywords.some(k => new RegExp(`^${k}$`, 'i').test(part));
+        // Compare case-insensitively with the raw unescaped keyword list
+        const isMatch = allKeywords.some(k => k.toLowerCase() === part.toLowerCase());
         if (isMatch) {
-          const useSaffron = i % 2 === 1;
-          if (useSaffron) {
-            return (
-              <span 
-                key={i} 
-                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#FF9933]/15 text-[#D97706] rounded border border-[#FF9933]/30 font-bold text-[0.95em]"
-                title="Corporate Keyword"
-              >
-                {part}
-              </span>
-            );
-          } else {
-            return (
-              <span 
-                key={i} 
-                className="inline-block px-1.5 py-0.5 mx-0.5 bg-[#000080]/10 text-[#000080] rounded border border-[#000080]/20 font-bold text-[0.95em]"
-                title="Tech Accent"
-              >
-                {part}
-              </span>
-            );
-          }
+          return (
+            <span 
+              key={i} 
+              className="inline-block mx-0.5 keyword-orange"
+              title="Highlighted Keyword"
+            >
+              {part}
+            </span>
+          );
         }
         return <span key={i}>{part}</span>;
       })}
@@ -157,66 +147,153 @@ const renderHighlightedText = (text: string, keywords: string[] = []) => {
 };
 
 // Shadow Suggestion Logic
-const getShadowSuggestion = (meeting: MeetingData | null) => {
-  if (!meeting) return { task: "Awaiting data...", icon: <CircleDashed size={16} />, action: null };
-  
-  // Priority 1: High Priority Action Items
-  const highPriority = meeting.action_items?.find(item => item.priority === 'High');
-  if (highPriority) {
+interface StructuredSuggestion {
+  assignee: string;
+  actionText: string;
+  btnLabel: string;
+  rawTask?: string;
+  icon: React.ReactNode;
+}
+
+const getStructuredSuggestion = (meeting: MeetingData | null): StructuredSuggestion => {
+  if (!meeting) {
     return {
-      task: `Pending Blocker: ${highPriority.assigned_to} is assigned to "${highPriority.task}".`,
-      action: `Email ${highPriority.assigned_to} for status`,
-      icon: <Lightbulb size={16} className="text-amber-400" />
+      assignee: "SYSTEM",
+      actionText: "Awaiting database synchronization...",
+      btnLabel: "Syncing...",
+      icon: <CircleDashed size={14} className="animate-spin text-purple-400" />
+    };
+  }
+
+  // Priority 1: High Priority Action Items or dynamic action items
+  const highPriority = meeting.action_items?.find(item => item.priority === 'High' || item.priority === undefined);
+  if (highPriority) {
+    let cleanTask = highPriority.task;
+    
+    // Perform heuristic shortening/cleaning
+    cleanTask = cleanTask
+      .replace(/^Yes\.\s*The\s*client\s*said\s*the\s*crawler\s*needs\s*to\s*be\s*waterproof\s*up\s*to\s*5\s*meters\.\s*That’s\s*a\s*new\s*requirement\s*we\s*didn't\s*account\s*for\s*in\s*the\s*initial\s*scope\.\s*We\s*might\s*need\s*to\s*adjust\s*the\s*casing\s*material\s*budget\s*and\s*re-evaluate\s*the\s*O-ring\s*seals\./i, "Evaluate O-ring seals & budget for 5m waterproofing casing")
+      .replace(/Follow up on client feedback and ensure the new waterproofing requirement is incorporated into the design/i, "Integrate 5m waterproofing client feedback into CAD/design")
+      .replace(/Procure heavy-duty polycarbonate casing samples for pressure testing/i, "Procure polycarbonate casing samples for pressure testing")
+      .replace(/Contact Chennai Ocean Tech institute for pressure testing facility access/i, "Secure access to Chennai Ocean Tech high-pressure chamber")
+      .replace(/is assigned to/i, "");
+    
+    // Clean tag formatting
+    cleanTask = cleanTask.replace(/\[Waterproofing,\s*Client\s*Feedback\]/i, "").trim();
+
+    return {
+      assignee: highPriority.assigned_to.toUpperCase(),
+      actionText: cleanTask,
+      btnLabel: `Email ${highPriority.assigned_to}`,
+      rawTask: highPriority.task,
+      icon: <Lightbulb size={14} className="text-amber-400" />
     };
   }
 
   // Priority 2: Keyword based automation
   const text = JSON.stringify(meeting).toLowerCase();
   if (text.includes("memory leak") || text.includes("oom")) {
-    return { task: "Initialize Auto-Heap-Dump on K8s OOMEvents", action: "Deploy Script", icon: <Terminal size={16} /> };
+    return {
+      assignee: "DEV-OPS",
+      actionText: "Trigger Auto-Heap-Dump on K8s OOMEvents",
+      btnLabel: "Deploy Hook",
+      icon: <Terminal size={14} className="text-cyan-400" />
+    };
   }
   if (text.includes("api") || text.includes("endpoint")) {
-    return { task: "Generate Zod Schemas from current API trace", action: "Run Generator", icon: <Terminal size={16} /> };
+    return {
+      assignee: "FRONTEND",
+      actionText: "Generate Zod Schemas from current API trace",
+      btnLabel: "Generate",
+      icon: <Terminal size={14} className="text-purple-400" />
+    };
   }
   
-  return { task: "Monitor technical debt in recent commit clusters", action: "View Insights", icon: <Terminal size={16} /> };
+  return {
+    assignee: "LEAD",
+    actionText: "Monitor technical debt in recent commit clusters",
+    btnLabel: "Analyze",
+    icon: <Terminal size={14} className="text-slate-400" />
+  };
 };
 
 const ShadowSuggestion = ({ meeting }: { meeting: MeetingData | null }) => {
-  const suggestion = getShadowSuggestion(meeting);
+  const [ignored, setIgnored] = useState(false);
+  const suggestion = getStructuredSuggestion(meeting);
+
+  if (ignored) return null;
 
   const handleAction = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (suggestion.action?.startsWith("Email")) {
-      const subject = encodeURIComponent(`Kage Intelligence: Tactical Followup`);
-      const body = encodeURIComponent(`Hi,\n\nI'm following up on a pending tactical blocker identified by Kage:\n\n"${suggestion.task}"\n\nLet's discuss the status.\n\nSent from Kage Dashboard.`);
+    if (suggestion.btnLabel?.startsWith("Email")) {
+      const subject = encodeURIComponent(`Kage Intelligence: Blocker Resolution Action Required [${suggestion.assignee}]`);
+      const body = encodeURIComponent(`Hi ${suggestion.assignee},\n\nI'm following up on a pending action blocker flagged by Kage.ai:\n\n"${suggestion.rawTask || suggestion.actionText}"\n\nWhat is our current status on this? Let's align on next steps.\n\nSent from Kage Dashboard.`);
       window.location.href = `mailto:?subject=${subject}&body=${body}`;
     }
   };
 
+  const btn1Label = suggestion.btnLabel.startsWith("Email") ? "Email" : suggestion.btnLabel;
+
   return (
     <motion.div 
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="hud-glass p-4 rounded-lg border-l-4 border-purple-500 shadow-lg relative overflow-hidden"
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="shadow-banner p-5 relative overflow-hidden shadow-lg border border-purple-500/20 rounded-xl"
     >
-      <div className="absolute top-0 right-0 p-1 bg-purple-500/10 text-[8px] font-black uppercase tracking-tighter text-purple-400">Tactical_Pulse</div>
-      <div className="flex items-center gap-4">
-        <div className="p-2 bg-purple-500/20 text-purple-400 rounded-md">
-          {suggestion.icon}
+      <div className="absolute top-0 right-0 p-1.5 bg-purple-500/10 text-[8px] font-mono font-black uppercase tracking-widest text-purple-400 rounded-bl-md border-l border-b border-purple-500/15">
+        Tactical_Pulse
+      </div>
+      
+      {/* Top Banner Blocker Headline */}
+      <div className="flex items-center gap-2 mb-3">
+        <Lightbulb size={13} className="text-amber-400 animate-pulse shrink-0" />
+        <span className="text-[10px] font-mono text-purple-300 font-bold uppercase tracking-widest">
+          A high priority blocker is pending!
+        </span>
+      </div>
+
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        {/* Left Side: Assignee & Action Row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 w-full min-w-0">
+          {/* Glowing Icon */}
+          <div className="p-3 bg-purple-500/10 text-purple-400 rounded-lg border border-purple-500/20 shrink-0 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+            {suggestion.icon}
+          </div>
+          
+          {/* Core Layout: Assignee Name adjacent to Task Description */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 min-w-0 flex-1">
+            {/* Blocker Assignee - Saffron Accent */}
+            <span className="text-sm font-mono font-bold text-[#FF9933] tracking-wider uppercase shrink-0">
+              {suggestion.assignee}
+            </span>
+            
+            <div className="h-4 w-px bg-slate-800/60 hidden sm:block"></div>
+            
+            {/* Blocker action description */}
+            <p className="text-sm font-sans text-slate-200 leading-snug truncate pr-2 flex-1 min-w-0">
+              {suggestion.actionText}
+            </p>
+          </div>
         </div>
-        <div className="flex-1">
-          <h4 className="text-[9px] font-mono text-slate-500 uppercase tracking-widest mb-1">Shadow Suggestion</h4>
-          <p className="text-xs font-bold text-white tracking-tight leading-snug">{suggestion.task}</p>
-        </div>
-        {suggestion.action && (
+
+        {/* Right Side: Dual Actions Email & Ignore */}
+        <div className="flex items-center gap-2.5 w-full lg:w-auto justify-end shrink-0">
+          {suggestion.btnLabel && (
+            <button 
+              onClick={handleAction}
+              className="w-full lg:w-auto px-4.5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider rounded-md border border-purple-400/30 active:scale-95 shadow-[0_0_15px_rgba(124,58,237,0.25)] hover:shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all cursor-pointer"
+            >
+              {btn1Label}
+            </button>
+          )}
           <button 
-            onClick={handleAction}
-            className="px-3 py-1.5 bg-white text-black text-[10px] font-bold uppercase tracking-wider rounded-sm hover:bg-purple-400 transition-colors"
+            onClick={() => setIgnored(true)}
+            className="w-full lg:w-auto px-4.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] font-bold uppercase tracking-wider rounded-md border border-slate-800 active:scale-95 transition-all cursor-pointer"
           >
-            {suggestion.action}
+            Ignore
           </button>
-        )}
+        </div>
       </div>
     </motion.div>
   );
@@ -873,6 +950,19 @@ export default function NLPDashboard() {
     return { level: "none", color: "bg-slate-800/20 border border-slate-700/20", label: "Not Discussed" };
   };
 
+  const getHeatmapCellClass = (level: string) => {
+    switch (level) {
+      case "high":
+        return "heatmap-cell heatmap-cell-high";
+      case "medium":
+        return "heatmap-cell heatmap-cell-medium";
+      case "discussed":
+        return "heatmap-cell heatmap-cell-discussed";
+      default:
+        return "heatmap-cell heatmap-cell-none";
+    }
+  };
+
   const getHeatmapCellDetail = (topicIdx: number, meetingIdx: number) => {
     const topic = TOPIC_CLUSTERS[topicIdx];
     const meeting = pastMeetings[meetingIdx];
@@ -1272,7 +1362,7 @@ export default function NLPDashboard() {
             className="text-center z-10 max-w-5xl"
           >
             <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-48 h-48 mx-auto mb-8 drop-shadow-[0_0_30px_rgba(168,85,247,0.3)] animate-pulse" style={{ animationDuration: '4s' }} />
-            <h1 className="text-7xl md:text-9xl font-bold tracking-tighter mb-6 font-mono uppercase glass-text">KAGE.ai</h1>
+            <h1 className="text-7xl md:text-9xl tracking-tighter mb-6 uppercase glass-text heading-serif">KAGE.ai</h1>
             
             <p className="text-2xl md:text-4xl text-purple-400 font-mono tracking-tight mb-8 drop-shadow-md uppercase">
               Transcribe. Analyze. Automate.
@@ -1299,7 +1389,7 @@ export default function NLPDashboard() {
       )}
 
       {/* Dashboard Section */}
-      <div className="min-h-screen p-8 relative z-10 bg-[#060608]">
+      <div className="min-h-screen pt-10 pb-16 px-6 md:px-12 lg:px-16 relative z-10 bg-[#060608]">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -1308,11 +1398,11 @@ export default function NLPDashboard() {
           className="max-w-7xl mx-auto"
         >
           {/* Dashboard Header */}
-          <motion.div variants={fadeUpVariant} className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 border-b border-slate-800 pb-6 gap-4">
+          <motion.div variants={fadeUpVariant} className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 border-b border-slate-800/60 pb-6 pt-0 gap-4">
             <div className="flex items-center gap-5">
               <img src="/kage_logo.svg" alt="Kage.ai Logo" className="w-14 h-14 drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]" />
               <div>
-                <h2 className="text-3xl font-bold text-white tracking-tight">Kage.ai</h2>
+                <h2 className="text-3xl text-white heading-serif">Kage.ai</h2>
                 <p className="text-slate-500 font-mono text-xs mt-1 uppercase tracking-widest">Intelligence in the Shadows</p>
               </div>
             </div>
@@ -1335,23 +1425,23 @@ export default function NLPDashboard() {
             <ShadowSuggestion meeting={pastMeetings[0]} />
           </motion.div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <motion.div variants={fadeUpVariant} className="lg:col-span-2 space-y-8 flex flex-col">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+            <motion.div variants={fadeUpVariant} className="lg:col-span-2 space-y-12 lg:space-y-16 flex flex-col">
               {/* Upload Section */}
-              <div className="p-6 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl hud-border scanline-container">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
+              <div className="p-8 hud-glass rounded-2xl border border-slate-800/50 shadow-2xl hud-border scanline-container">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl border border-purple-500/20">
                       <Terminal size={24} />
                     </div>
                     <div>
-                      <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Terminal_Input</h2>
+                      <h2 className="label-uppercase">Terminal_Input</h2>
                       <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">Ingest meeting transcripts or media files for intelligence synthesis</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <input
                     type="text"
                     placeholder="Meeting Title (Optional - auto-named if file attached)"
@@ -1365,10 +1455,10 @@ export default function NLPDashboard() {
                       placeholder="Paste raw meeting transcript here, or click the '+' button to attach a .txt, .mp3, or .mp4 file..."
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
-                      className="w-full h-44 p-4 pb-14 border-0 focus:ring-0 text-sm font-sans focus:outline-none bg-transparent text-slate-300 transition-colors resize-none placeholder:text-slate-600"
+                      className="w-full h-52 p-5 pb-16 border-0 focus:ring-0 text-sm font-sans focus:outline-none bg-transparent text-slate-300 transition-colors resize-none placeholder:text-slate-600"
                     ></textarea>
 
-                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between border-t border-slate-800/40 pt-2 shrink-0">
+                    <div className="absolute bottom-4 left-5 right-5 flex items-center justify-between border-t border-slate-800/40 pt-2 shrink-0">
                       <div className="flex items-center gap-3">
                         <label className="p-2 bg-slate-800/40 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition-all cursor-pointer flex items-center justify-center border border-slate-800">
                           <Plus size={18} />
@@ -1414,7 +1504,7 @@ export default function NLPDashboard() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex justify-end">
+                <div className="mt-8 flex justify-end">
                   <button
                     onClick={handleUpload}
                     disabled={uploading || (!file && !pastedText)}
@@ -1435,28 +1525,28 @@ export default function NLPDashboard() {
 
               {/* Past Meetings List */}
               <div>
-                <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
                   Archives
-                  <div className="h-px bg-slate-800 flex-1"></div>
+                  <div className="h-px bg-slate-800/80 flex-1"></div>
                 </h2>
                 {pastMeetings.length === 0 ? (
                   <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl text-slate-600 bg-[#131316]/30 font-mono text-sm">No archives found. System awaiting input.</div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {pastMeetings.map((meeting, idx) => (
                       <div
                         key={idx}
                         onClick={() => setSelectedMeeting(meeting)}
-                        className="hud-glass p-6 rounded-2xl border border-slate-800/50 hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(128,90,213,0.15)] transition-all cursor-pointer group"
+                        className="premium-card p-6 rounded-2xl cursor-pointer group"
                       >
                         <div className="flex justify-between items-start mb-3 w-full gap-2">
-                          <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors text-lg">{meeting.title}</h3>
+                          <h3 className="text-white group-hover:text-purple-400 transition-colors text-2xl heading-serif">{meeting.title}</h3>
                           {bookmarkedMeetings.has(meeting.title) && (
                             <Bookmark size={16} className="text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)] shrink-0 mt-1" />
                           )}
                         </div>
                         <span className="text-[10px] text-slate-500 font-mono mb-4 block">{meeting.timestamp}</span>
-                        <p className="text-sm text-slate-400 line-clamp-2 mb-6 font-mono leading-relaxed">
+                        <p className="text-slate-400 line-clamp-2 mb-6 body-inter">
                           {meeting.summary.executive_summary?.[0]?.text || "Analyzed meeting data."}
                         </p>
                         <div className="flex items-center gap-3 mt-auto">
@@ -1484,7 +1574,7 @@ export default function NLPDashboard() {
                         <Flame size={20} className="animate-pulse" />
                       </div>
                       <div>
-                        <h2 className="font-bold text-white text-lg tracking-wide uppercase font-mono">Conflict_Heatmap</h2>
+                        <h2 className="label-uppercase">Conflict_Heatmap</h2>
                         <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest">Structural Org-Level Friction & Blocker Matrix</p>
                       </div>
                     </div>
@@ -1517,9 +1607,9 @@ export default function NLPDashboard() {
                                     onMouseEnter={() => setHeatmapHoverCell({ topicIdx: tIdx, meetingIdx: mIdx })}
                                     onMouseLeave={() => setHeatmapHoverCell(null)}
                                     onClick={() => setSelectedMeeting(meeting)}
-                                    className={`w-6 h-6 rounded cursor-pointer transition-all duration-200 transform hover:scale-105 flex items-center justify-center font-bold ${heat.color} ${
-                                      isHovered ? "ring-2 ring-white" : ""
-                                    }`}
+                                    className={`w-6 h-6 cursor-pointer flex items-center justify-center font-bold ${getHeatmapCellClass(heat.level)} ${
+                                      isHovered ? "ring-2 ring-white/50" : ""
+                                    } ${heat.level === 'high' ? 'animate-pulse' : ''}`}
                                     title={`${meeting.title} - ${heat.label}`}
                                   >
                                     <span className="text-[7px] text-white/50">{mIdx + 1}</span>
@@ -1574,12 +1664,12 @@ export default function NLPDashboard() {
 
                   <div className="mt-auto pt-4 border-t border-slate-800/60 font-mono">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Active Org Friction Score</span>
-                      <span className="text-xs font-bold text-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.2)]">68 // HIGH FRICTION</span>
+                      <span className="label-uppercase">Active Org Friction Score</span>
+                      <span className="text-xs text-rose-400 stat-number">68 // HIGH FRICTION</span>
                     </div>
-                    <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-3">
+                    <div className="w-full progress-track mb-3">
                       <div 
-                        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]" 
+                        className="progress-fill-friction" 
                         style={{ width: "68%" }}
                       ></div>
                     </div>
@@ -1601,10 +1691,10 @@ export default function NLPDashboard() {
             </motion.div>
 
             {/* Right Sidebar */}
-            <motion.div variants={fadeUpVariant} className="lg:col-span-1 space-y-8 flex flex-col relative h-full">
-              <div className="grid grid-cols-1 gap-6 sticky top-8">
+            <motion.div variants={fadeUpVariant} className="lg:col-span-1 space-y-12 lg:space-y-16 flex flex-col relative h-full">
+              <div className="grid grid-cols-1 gap-8 sticky top-16">
                 {/* Calendar Widget */}
-                <div className="hud-glass p-6 rounded-2xl border border-slate-800/50 shadow-2xl">
+                <div className="hud-glass p-8 rounded-2xl border border-slate-800/50 shadow-2xl">
                   <div className="flex justify-between items-center border-b border-slate-800/50 pb-4 mb-4">
                     <div className="flex flex-col">
                       <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Tactical_Schedule</h3>
@@ -2064,8 +2154,8 @@ export default function NLPDashboard() {
             <div className="px-8 pt-8 border-b border-slate-800 shrink-0 bg-gradient-to-b from-[#1a1a24] to-[#131316]">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-white tracking-tight">{selectedMeeting.title}</h2>
-                  <p className="text-xs text-slate-500 mt-2 font-mono tracking-widest uppercase">{selectedMeeting.timestamp}</p>
+                  <h2 className="modal-title-serif">{selectedMeeting.title}</h2>
+                  <p className="modal-subline-inter mt-2 uppercase">{selectedMeeting.timestamp}</p>
                 </div>
                 <button
                   onClick={() => setSelectedMeeting(null)}
@@ -2089,12 +2179,12 @@ export default function NLPDashboard() {
                       disabled={isLocked}
                       onClick={() => !isLocked && setActiveTab(tab.id as any)}
                       onKeyDown={(e) => !isLocked && handleTabKeyDown(e, idx)}
-                      className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] flex items-center gap-1.5 ${
+                      className={`pb-4 nav-tab-button outline-none transition-all whitespace-nowrap focus-visible:ring-2 focus-visible:ring-purple-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#131316] flex items-center gap-1.5 ${
                         isLocked
-                          ? 'border-transparent text-slate-500/30 cursor-not-allowed pointer-events-none'
+                          ? 'text-slate-500/30 cursor-not-allowed pointer-events-none'
                           : activeTab === tab.id
-                            ? 'border-purple-500 text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
-                            : 'border-transparent text-slate-600 hover:text-slate-300'
+                            ? 'active text-white drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]'
+                            : 'text-slate-600 hover:text-slate-300'
                       }`}
                     >
                       {isLocked && <Lock size={12} className="text-slate-500/50 shrink-0 mr-1.5" />}
@@ -2141,8 +2231,8 @@ export default function NLPDashboard() {
 
                   {/* Spotlight T5 Summary */}
                   {selectedMeeting.summary.executive_summary && selectedMeeting.summary.executive_summary.length > 0 && (
-                    <div className="bg-slate-100/95 backdrop-blur-xl border border-slate-300/50 rounded-xl p-10 shadow-[0_0_50px_rgba(168,85,247,0.1)] transform transition-transform text-slate-800">
-                      <div className="space-y-8">
+                    <div className="bg-[#131316]/50 backdrop-blur-xl border border-slate-800/80 rounded-xl p-8 lg:p-10 shadow-[0_0_50px_rgba(99,68,212,0.05)] transform transition-transform text-slate-100">
+                      <div className="space-y-6">
                         {selectedMeeting.summary.executive_summary.map((sum, i) => {
                           const isBookmarked = bookmarkedSentences.has(i);
                           return (
@@ -2154,34 +2244,34 @@ export default function NLPDashboard() {
                                 else next.add(i);
                                 setBookmarkedSentences(next);
                               }}
-                              className={`flex flex-col gap-3 p-5 rounded-xl transition-all duration-300 relative cursor-pointer group hover:bg-slate-200/50 ${
+                              className={`flex flex-col gap-3.5 p-5 rounded-xl transition-all duration-300 relative cursor-pointer group ${
                                 isBookmarked 
-                                  ? 'bg-white shadow-[0_10px_30px_rgba(255,153,51,0.08)] border-l-4 border-l-[#FF9933]' 
-                                  : 'border border-transparent bg-slate-50/50 hover:bg-slate-100'
+                                  ? 'bg-[#FF9933]/[0.03] border border-[#FF9933]/30 border-l-4 border-l-[#FF9933] shadow-[0_10px_30px_rgba(255,153,51,0.04)] text-slate-100' 
+                                  : 'border border-white/[0.04] bg-white/[0.015] hover:bg-white/[0.04] hover:border-white/[0.08] text-slate-200'
                               }`}
                             >
                               {isBookmarked && (
-                                <div className="absolute top-0 left-0 w-1.5 h-full rounded-l-xl bg-[#FF9933]" />
+                                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl bg-[#FF9933]" />
                               )}
                               <div className="flex justify-between items-center z-10">
-                                <span className="self-start text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/80 px-2 py-1 rounded">
+                                <span className="self-start text-[9px] font-mono font-bold uppercase tracking-wider text-purple-300 bg-purple-950/40 border border-purple-800/30 px-2 py-0.5 rounded">
                                   {sum.speaker}
                                 </span>
                                 <Bookmark 
-                                  size={16} 
+                                  size={15} 
                                   className={`transition-all ${
                                     isBookmarked 
                                       ? 'text-[#FF9933] fill-[#FF9933] drop-shadow-[0_0_4px_rgba(255,153,51,0.3)]' 
-                                      : 'text-slate-300 hover:text-[#FF9933] opacity-60 group-hover:opacity-100'
+                                      : 'text-slate-500 hover:text-[#FF9933] opacity-80 group-hover:opacity-100'
                                   }`} 
                                 />
                               </div>
-                              <p className="text-xl md:text-2xl text-slate-800 leading-snug font-semibold tracking-tight z-10">
+                              <p className="text-slate-200 z-10 body-inter leading-relaxed">
                                 {renderHighlightedText(sum.text, selectedMeeting.summary.keywords)}
                               </p>
                               {selectedMeeting.isGoogleEvent && (
-                                <p className="text-xs font-bold text-slate-500 mt-3 font-mono tracking-wide z-10 uppercase flex items-center gap-1.5 animate-pulse">
-                                  <Lock size={14} className="text-slate-400 shrink-0" />
+                                <p className="text-[10px] font-bold text-slate-400 mt-2 font-mono tracking-wide z-10 uppercase flex items-center gap-1.5 animate-pulse">
+                                  <Lock size={12} className="text-slate-500 shrink-0" />
                                   Upload your transcript to analyze
                                 </p>
                               )}
@@ -2365,7 +2455,7 @@ export default function NLPDashboard() {
                 <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {Object.entries(selectedMeeting.analytics).map(([name, stats]) => (
-                      <div key={name} className="flex flex-col gap-6 p-6 bg-[#131316] rounded-xl border border-slate-800 hover:border-slate-700 transition-colors">
+                      <div key={name} className="flex flex-col gap-4 px-[22px] py-[20px] premium-card rounded-xl min-h-[140px]">
                         <div className="flex justify-between items-start">
                           <div className="flex flex-col">
                             <div className="flex items-center gap-3">
@@ -2373,17 +2463,17 @@ export default function NLPDashboard() {
                               <span>{getSentimentIcon(stats.sentiment)}</span>
                             </div>
                             {stats.role && (
-                              <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-2">{stats.role}</span>
+                              <span className="label-uppercase mt-[4px]">{stats.role}</span>
                             )}
                           </div>
                         </div>
                         <div className="mt-auto pt-4 border-t border-slate-800/50">
-                          <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-3">
-                            <span>Participation Threshold</span>
-                            <span className="text-cyan-400">{stats.participation}</span>
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="label-uppercase">Participation Threshold</span>
+                            <span className="text-cyan-400 stat-number">{stats.participation}</span>
                           </div>
-                          <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
-                            <div className="bg-cyan-500 h-full rounded-full shadow-[0_0_10px_rgba(6,182,212,0.5)]" style={{ width: stats.participation }}></div>
+                          <div className="w-full progress-track">
+                            <div className="progress-fill-cyan" style={{ width: stats.participation }}></div>
                           </div>
                         </div>
                       </div>
